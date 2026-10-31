@@ -3,139 +3,224 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistem Monitoring Stok</title>
+  <title>Sistem Antrean Truk Vendor</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Supabase JS Client Library -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-slate-50 text-slate-900 min-h-screen p-6">
+<body class="bg-slate-100 text-slate-800 min-h-screen p-4 sm:p-6">
 
-  <div class="max-w-4xl mx-auto space-y-6">
-    <header class="border-b pb-4">
-      <h1 class="text-2xl font-bold tracking-tight text-slate-800">Warehouse Mini Inventory</h1>
-      <p class="text-sm text-slate-500">Live PostgreSQL Database via Supabase</p>
+  <div class="max-w-5xl mx-auto space-y-6">
+    <!-- Header -->
+    <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-5 rounded-xl border border-slate-200 shadow-sm gap-4">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Antrean Bongkar Muat Vendor</h1>
+        <p class="text-xs sm:text-sm text-slate-500">Monitoring status truk di area logistik secara real-time</p>
+      </div>
+      <button onclick="fetchQueues()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-medium px-4 py-2 rounded-lg transition">
+        Refresh Status
+      </button>
     </header>
 
-    <!-- Form Input Data -->
+    <!-- Form Pendaftaran Truk Datang -->
     <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-      <h2 class="text-base font-semibold mb-3">Tambah Master / Saldo Barang</h2>
-      <form id="itemForm" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-        <input type="text" id="code" placeholder="Kode Item (cth: BRG-001)" required class="border p-2 rounded-lg text-sm outline-none focus:border-blue-600">
-        <input type="text" id="name" placeholder="Nama Barang" required class="border p-2 rounded-lg text-sm outline-none focus:border-blue-600">
-        <input type="text" id="category" placeholder="Kategori" class="border p-2 rounded-lg text-sm outline-none focus:border-blue-600">
-        <input type="number" id="qty" placeholder="Qty Awal" required class="border p-2 rounded-lg text-sm outline-none focus:border-blue-600">
+      <h2 class="text-sm font-semibold uppercase text-slate-500 mb-3 tracking-wider">Registrasi Truk Masuk (Security / Logistik)</h2>
+      <form id="queueForm" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <input type="text" id="vendorName" placeholder="Nama Vendor / Supplier" required class="border border-slate-300 p-2.5 rounded-lg text-sm outline-none focus:border-blue-600">
+        <input type="text" id="driverName" placeholder="Nama Supir" required class="border border-slate-300 p-2.5 rounded-lg text-sm outline-none focus:border-blue-600">
+        <input type="text" id="plateNumber" placeholder="No. Polisi Truk (cth: L 1234 AB)" required class="border border-slate-300 p-2.5 rounded-lg text-sm uppercase outline-none focus:border-blue-600">
+        <input type="text" id="material" placeholder="Muatan / Barang" required class="border border-slate-300 p-2.5 rounded-lg text-sm outline-none focus:border-blue-600">
         
-        <div class="sm:col-span-4 flex justify-end">
-          <button type="submit" id="btnSubmit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition">
-            Simpan ke Database
+        <div class="sm:col-span-4 flex justify-end mt-1">
+          <button type="submit" id="btnSubmit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-lg text-sm transition">
+            + Tambah ke Antrean
           </button>
         </div>
       </form>
     </div>
 
-    <!-- Tabel Monitoring Stok -->
-    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-base font-semibold">Daftar Stok Terkini</h2>
-        <button onclick="fetchItems()" class="text-sm text-blue-600 hover:underline">Refresh Data</button>
+    <!-- Board Status Antrean -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      
+      <!-- Kolom: Menunggu -->
+      <div class="bg-amber-50/60 border border-amber-200 rounded-xl p-4 flex flex-col">
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="font-bold text-amber-900 text-sm flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> 1. Menunggu Antrean
+          </h3>
+          <span id="countMenunggu" class="text-xs bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-bold">0</span>
+        </div>
+        <div id="listMenunggu" class="space-y-3 flex-1 overflow-y-auto">
+          <!-- Card Render Disini -->
+        </div>
       </div>
 
-      <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm">
-          <thead class="bg-slate-100 text-slate-600 uppercase text-xs">
-            <tr>
-              <th class="p-3">Kode</th>
-              <th class="p-3">Nama Barang</th>
-              <th class="p-3">Kategori</th>
-              <th class="p-3">Qty</th>
-              <th class="p-3 text-center">Aksi</th>
-            </tr>
-          </thead>
-          <tbody id="inventoryList" class="divide-y divide-slate-100">
-            <tr><td colspan="5" class="p-4 text-center text-slate-400">Memuat data...</td></tr>
-          </tbody>
-        </table>
+      <!-- Kolom: Proses Bongkar -->
+      <div class="bg-blue-50/60 border border-blue-200 rounded-xl p-4 flex flex-col">
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="font-bold text-blue-900 text-sm flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span> 2. Sedang Dibongkar
+          </h3>
+          <span id="countDibongkar" class="text-xs bg-blue-200 text-blue-900 px-2 py-0.5 rounded-full font-bold">0</span>
+        </div>
+        <div id="listDibongkar" class="space-y-3 flex-1 overflow-y-auto">
+          <!-- Card Render Disini -->
+        </div>
       </div>
+
+      <!-- Kolom: Selesai -->
+      <div class="bg-emerald-50/60 border border-emerald-200 rounded-xl p-4 flex flex-col">
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="font-bold text-emerald-900 text-sm flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> 3. Selesai Bongkar
+          </h3>
+          <span id="countSelesai" class="text-xs bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full font-bold">0</span>
+        </div>
+        <div id="listSelesai" class="space-y-3 flex-1 overflow-y-auto max-h-[500px]">
+          <!-- Card Render Disini -->
+        </div>
+      </div>
+
     </div>
   </div>
 
   <script>
-    // 1. Inisialisasi Koneksi Supabase
     const SUPABASE_URL = "https://qayfxxiqcyuigvytysmc.supabase.co";
+    // Gunakan publishable key milik Anda sebelumnya
     const SUPABASE_KEY = "sb_publishable_2O0mA4TLwdB95scC9Im6IQ_hHmaKNEJ";
-    
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // 2. Fungsi Tarik Data dari Database
-    async function fetchItems() {
-      const tbody = document.getElementById('inventoryList');
-      tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-400">Memuat data...</td></tr>';
-
+    // Ambil Data Antrean
+    async function fetchQueues() {
       const { data, error } = await db
-        .from('items')
+        .from('vendor_queues')
         .select('*')
-        .order('id', { ascending: false });
+        .order('id', { ascending: true });
 
       if (error) {
-        tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-500 font-mono text-xs">${error.message}</td></tr>`;
+        alert('Gagal mengambil antrean: ' + error.message);
         return;
       }
 
-      if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-400">Belum ada barang tersimpan.</td></tr>';
-        return;
-      }
+      const listMenunggu = document.getElementById('listMenunggu');
+      const listDibongkar = document.getElementById('listDibongkar');
+      const listSelesai = document.getElementById('listSelesai');
 
-      tbody.innerHTML = data.map(item => `
-        <tr class="hover:bg-slate-50 transition">
-          <td class="p-3 font-mono font-medium text-slate-700">${item.item_code}</td>
-          <td class="p-3 font-medium">${item.item_name}</td>
-          <td class="p-3 text-slate-500">${item.category || '-'}</td>
-          <td class="p-3 font-bold">${item.qty}</td>
-          <td class="p-3 text-center">
-            <button onclick="deleteItem(${item.id})" class="text-xs text-red-500 hover:text-red-700 font-medium">Hapus</button>
-          </td>
-        </tr>
-      `).join('');
+      listMenunggu.innerHTML = '';
+      listDibongkar.innerHTML = '';
+      listSelesai.innerHTML = '';
+
+      let c1 = 0, c2 = 0, c3 = 0;
+
+      data.forEach(item => {
+        if (item.status === 'Menunggu') {
+          c1++;
+          listMenunggu.innerHTML += createCard(item, 'mulai');
+        } else if (item.status === 'Dibongkar') {
+          c2++;
+          listDibongkar.innerHTML += createCard(item, 'selesai');
+        } else {
+          c3++;
+          listSelesai.innerHTML += createCard(item, 'tuntas');
+        }
+      });
+
+      document.getElementById('countMenunggu').innerText = c1;
+      document.getElementById('countDibongkar').innerText = c2;
+      document.getElementById('countSelesai').innerText = c3;
+
+      if (c1 === 0) listMenunggu.innerHTML = '<p class="text-xs text-slate-400 italic text-center py-4">Tidak ada antrean</p>';
+      if (c2 === 0) listDibongkar.innerHTML = '<p class="text-xs text-slate-400 italic text-center py-4">Tidak ada pembongkaran aktif</p>';
+      if (c3 === 0) listSelesai.innerHTML = '<p class="text-xs text-slate-400 italic text-center py-4">Belum ada yang selesai</p>';
     }
 
-    // 3. Fungsi Tambah Item
-    document.getElementById('itemForm').addEventListener('submit', async (e) => {
+    // Template Card Truk
+    function createCard(item, stage) {
+      let actionButton = '';
+      if (stage === 'mulai') {
+        actionButton = `
+          <button onclick="updateStatus(${item.id}, 'Dibongkar')" class="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs py-1.5 rounded transition">
+            Mulai Masuk Bongkar →
+          </button>
+        `;
+      } else if (stage === 'selesai') {
+        actionButton = `
+          <button onclick="updateStatus(${item.id}, 'Selesai')" class="w-full mt-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs py-1.5 rounded transition">
+            Tandai Selesai ✓
+          </button>
+        `;
+      } else {
+        actionButton = `
+          <div class="mt-2 pt-2 border-t border-slate-100 flex justify-between items-center text-[11px] text-slate-400">
+            <span>Selesai</span>
+            <button onclick="deleteQueue(${item.id})" class="text-red-400 hover:text-red-600">Hapus</button>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="bg-white p-3.5 rounded-lg border border-slate-200 shadow-sm text-sm">
+          <div class="flex justify-between items-start">
+            <span class="font-mono font-bold text-slate-800 uppercase tracking-wide">${item.plate_number}</span>
+            <span class="text-[11px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">${item.vendor_name}</span>
+          </div>
+          <div class="mt-1 text-xs text-slate-600">
+            <p><strong>Supir:</strong> ${item.driver_name}</p>
+            <p><strong>Muatan:</strong> ${item.material}</p>
+          </div>
+          ${actionButton}
+        </div>
+      `;
+    }
+
+    // Tambah Antrean Masuk
+    document.getElementById('queueForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('btnSubmit');
       btn.disabled = true;
       btn.innerText = 'Menyimpan...';
 
       const payload = {
-        item_code: document.getElementById('code').value,
-        item_name: document.getElementById('name').value,
-        category: document.getElementById('category').value,
-        qty: parseInt(document.getElementById('qty').value, 10)
+        vendor_name: document.getElementById('vendorName').value,
+        driver_name: document.getElementById('driverName').value,
+        plate_number: document.getElementById('plateNumber').value.toUpperCase(),
+        material: document.getElementById('material').value,
+        status: 'Menunggu'
       };
 
-      const { error } = await db.from('items').insert([payload]);
+      const { error } = await db.from('vendor_queues').insert([payload]);
 
       if (error) {
-        alert('Gagal simpan: ' + error.message);
+        alert('Gagal simpan antrean: ' + error.message);
       } else {
-        document.getElementById('itemForm').reset();
-        await fetchItems();
+        document.getElementById('queueForm').reset();
+        await fetchQueues();
       }
 
       btn.disabled = false;
-      btn.innerText = 'Simpan ke Database';
+      btn.innerText = '+ Tambah ke Antrean';
     });
 
-    // 4. Fungsi Hapus Item
-    async function deleteItem(id) {
-      if (!confirm('Yakin ingin menghapus item ini?')) return;
-      const { error } = await db.from('items').delete().eq('id', id);
-      if (error) alert(error.message);
-      else fetchItems();
+    // Update Status Truk (Menunggu -> Dibongkar -> Selesai)
+    async function updateStatus(id, newStatus) {
+      const { error } = await db
+        .from('vendor_queues')
+        .update({ status: newStatus })
+        .eq('id', id);
+
+      if (error) alert('Gagal update: ' + error.message);
+      else fetchQueues();
     }
 
-    // Jalankan pertama kali
-    fetchItems();
+    // Hapus Data Selesai
+    async function deleteQueue(id) {
+      if (!confirm('Hapus riwayat antrean ini?')) return;
+      const { error } = await db.from('vendor_queues').delete().eq('id', id);
+      if (error) alert(error.message);
+      else fetchQueues();
+    }
+
+    // Jalankan awal
+    fetchQueues();
   </script>
 </body>
 </html>
