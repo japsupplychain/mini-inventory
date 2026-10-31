@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistem Monitoring Stok</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Supabase JS Client Library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen p-6">
+
+  <div class="max-w-4xl mx-auto space-y-6">
+    <header class="border-b pb-4">
+      <h1 class="text-2xl font-bold tracking-tight text-slate-800">Warehouse Mini Inventory</h1>
+      <p class="text-sm text-slate-500">Live PostgreSQL Database via Supabase</p>
+    </header>
+
+    <!-- Form Input Data -->
+    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+      <h2 class="text-base font-semibold mb-3">Tambah Master / Saldo Barang</h2>
+      <form id="itemForm" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <input type="text" id="code" placeholder="Kode Item (cth: BRG-001)" required class="border p-2 rounded-lg text-sm outline-none focus:border-blue-600">
+        <input type="text" id="name" placeholder="Nama Barang" required class="border p-2 rounded-lg text-sm outline-none focus:border-blue-600">
+        <input type="text" id="category" placeholder="Kategori" class="border p-2 rounded-lg text-sm outline-none focus:border-blue-600">
+        <input type="number" id="qty" placeholder="Qty Awal" required class="border p-2 rounded-lg text-sm outline-none focus:border-blue-600">
+        
+        <div class="sm:col-span-4 flex justify-end">
+          <button type="submit" id="btnSubmit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition">
+            Simpan ke Database
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Tabel Monitoring Stok -->
+    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-base font-semibold">Daftar Stok Terkini</h2>
+        <button onclick="fetchItems()" class="text-sm text-blue-600 hover:underline">Refresh Data</button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="bg-slate-100 text-slate-600 uppercase text-xs">
+            <tr>
+              <th class="p-3">Kode</th>
+              <th class="p-3">Nama Barang</th>
+              <th class="p-3">Kategori</th>
+              <th class="p-3">Qty</th>
+              <th class="p-3 text-center">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="inventoryList" class="divide-y divide-slate-100">
+            <tr><td colspan="5" class="p-4 text-center text-slate-400">Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 1. Inisialisasi Koneksi Supabase
+    const SUPABASE_URL = "https://qayfxxiqcyuigvytysmc.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_2O0mA4TLwdB95scC9Im6IQ_hHmaKNEJ";
+    
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // 2. Fungsi Tarik Data dari Database
+    async function fetchItems() {
+      const tbody = document.getElementById('inventoryList');
+      tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-400">Memuat data...</td></tr>';
+
+      const { data, error } = await db
+        .from('items')
+        .select('*')
+        .order('id', { ascending: false });
+
+      if (error) {
+        tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-500 font-mono text-xs">${error.message}</td></tr>`;
+        return;
+      }
+
+      if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-400">Belum ada barang tersimpan.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = data.map(item => `
+        <tr class="hover:bg-slate-50 transition">
+          <td class="p-3 font-mono font-medium text-slate-700">${item.item_code}</td>
+          <td class="p-3 font-medium">${item.item_name}</td>
+          <td class="p-3 text-slate-500">${item.category || '-'}</td>
+          <td class="p-3 font-bold">${item.qty}</td>
+          <td class="p-3 text-center">
+            <button onclick="deleteItem(${item.id})" class="text-xs text-red-500 hover:text-red-700 font-medium">Hapus</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // 3. Fungsi Tambah Item
+    document.getElementById('itemForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btnSubmit');
+      btn.disabled = true;
+      btn.innerText = 'Menyimpan...';
+
+      const payload = {
+        item_code: document.getElementById('code').value,
+        item_name: document.getElementById('name').value,
+        category: document.getElementById('category').value,
+        qty: parseInt(document.getElementById('qty').value, 10)
+      };
+
+      const { error } = await db.from('items').insert([payload]);
+
+      if (error) {
+        alert('Gagal simpan: ' + error.message);
+      } else {
+        document.getElementById('itemForm').reset();
+        await fetchItems();
+      }
+
+      btn.disabled = false;
+      btn.innerText = 'Simpan ke Database';
+    });
+
+    // 4. Fungsi Hapus Item
+    async function deleteItem(id) {
+      if (!confirm('Yakin ingin menghapus item ini?')) return;
+      const { error } = await db.from('items').delete().eq('id', id);
+      if (error) alert(error.message);
+      else fetchItems();
+    }
+
+    // Jalankan pertama kali
+    fetchItems();
+  </script>
+</body>
+</html>
