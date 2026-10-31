@@ -3,139 +3,285 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistem Antrean Bongkar Truk</title>
+  <title>Sistem Logistik & Antrean Truk</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-slate-100 text-slate-800 min-h-screen p-4 sm:p-6">
+<body class="bg-slate-100 text-slate-800 min-h-screen">
 
-  <div class="max-w-6xl mx-auto space-y-6">
-    <!-- Header -->
-    <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-5 rounded-xl border border-slate-200 shadow-sm gap-4">
+  <!-- Navbar & Pilihan ID Masuk (Role) -->
+  <header class="bg-slate-900 text-white shadow-md sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
       <div>
-        <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Antrean Bongkar Muat Logistik</h1>
-        <p class="text-xs sm:text-sm text-slate-500">Monitoring alur truk vendor: Menunggu -> Dibongkar -> Selesai</p>
+        <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+          🚛 Smart Gate & Dock Control
+        </h1>
+        <p class="text-xs text-slate-400">Monitoring Antrean Bongkar Muat Terintegrasi</p>
       </div>
-      <button onclick="fetchQueues()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold px-4 py-2 rounded-lg transition">
-        Refresh Data
+
+      <!-- Pemilih ID Masuk / Petugas -->
+      <div class="flex items-center gap-2 bg-slate-800 p-1.5 rounded-lg border border-slate-700">
+        <span class="text-xs text-slate-400 pl-1 font-medium">ID Masuk:</span>
+        <select id="userRole" onchange="switchRole(this.value)" class="bg-slate-900 text-white text-xs font-semibold px-2.5 py-1 rounded outline-none border border-slate-600 focus:border-blue-400">
+          <option value="security">Pos Gerbang (Security)</option>
+          <option value="mandor">Area Bongkar (Mandor)</option>
+          <option value="admin">Supervisor / Admin (Akses Penuh)</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
+
+    <!-- Navigasi Tab (Khusus Admin) -->
+    <div id="adminTabBar" class="hidden flex border-b border-slate-300 gap-2">
+      <button onclick="showTab('antrean')" id="tabBtnAntrean" class="px-4 py-2 text-xs font-bold border-b-2 border-blue-600 text-blue-600">
+        Board Antrean Truk
       </button>
-    </header>
-
-    <!-- Form Registrasi Truk -->
-    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-      <h2 class="text-xs font-bold uppercase text-slate-500 mb-3 tracking-wider">Input Kendaraan Masuk</h2>
-      <form id="queueForm" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-        <!-- Master Vendor Dropdown -->
-        <div>
-          <label class="block text-xs font-medium text-slate-600 mb-1">Pilih Vendor</label>
-          <select id="vendorSelect" required class="w-full border border-slate-300 p-2.5 rounded-lg text-sm bg-white outline-none focus:border-blue-600">
-            <option value="">Memuat vendor...</option>
-          </select>
-        </div>
-
-        <!-- Master Jenis Mobil Dropdown -->
-        <div>
-          <label class="block text-xs font-medium text-slate-600 mb-1">Jenis Kendaraan</label>
-          <select id="vehicleSelect" required class="w-full border border-slate-300 p-2.5 rounded-lg text-sm bg-white outline-none focus:border-blue-600">
-            <option value="">Memuat jenis armada...</option>
-          </select>
-        </div>
-
-        <!-- No Polisi Truk -->
-        <div>
-          <label class="block text-xs font-medium text-slate-600 mb-1">No. Polisi Truk</label>
-          <input type="text" id="plateNumber" placeholder="Contoh: L 1234 AB" required class="w-full border border-slate-300 p-2.5 rounded-lg text-sm uppercase outline-none focus:border-blue-600">
-        </div>
-
-        <!-- Master Barang Dropdown -->
-        <div>
-          <label class="block text-xs font-medium text-slate-600 mb-1">Jenis Muatan / Barang</label>
-          <select id="materialSelect" required class="w-full border border-slate-300 p-2.5 rounded-lg text-sm bg-white outline-none focus:border-blue-600">
-            <option value="">Memuat barang...</option>
-          </select>
-        </div>
-
-        <div class="sm:col-span-4 flex justify-end mt-2">
-          <button type="submit" id="btnSubmit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-lg text-sm transition">
-            + Generate ID Antrean & Masukkan
-          </button>
-        </div>
-      </form>
+      <button onclick="showTab('master')" id="tabBtnMaster" class="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800">
+        Kelola Master Data (Vendor, Armada, Barang)
+      </button>
     </div>
 
-    <!-- Board Status Antrean (Kanban-Style) -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <!-- ================= HALAMAN 1: ANTREAN & REGISTRASI ================= -->
+    <div id="viewAntrean" class="space-y-6">
       
-      <!-- Kolom: Menunggu -->
-      <div class="bg-amber-50/70 border border-amber-200 rounded-xl p-4 flex flex-col">
+      <!-- Form Input Truk Masuk (Hanya untuk Security & Admin) -->
+      <section id="securityInputSection" class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
         <div class="flex justify-between items-center mb-3">
-          <h3 class="font-bold text-amber-900 text-sm flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> 1. Menunggu Antrean
-          </h3>
-          <span id="countMenunggu" class="text-xs bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-bold">0</span>
+          <h2 class="text-xs font-bold uppercase text-slate-500 tracking-wider">
+            [Pos Masuk] Registrasi Kendaraan Tiba
+          </h2>
+          <span class="text-[11px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-medium">
+            Form Aktif: Security / Admin
+          </span>
         </div>
-        <div id="listMenunggu" class="space-y-3 flex-1 overflow-y-auto"></div>
-      </div>
 
-      <!-- Kolom: Sedang Dibongkar -->
-      <div class="bg-blue-50/70 border border-blue-200 rounded-xl p-4 flex flex-col">
-        <div class="flex justify-between items-center mb-3">
-          <h3 class="font-bold text-blue-900 text-sm flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span> 2. Sedang Dibongkar
-          </h3>
-          <span id="countDibongkar" class="text-xs bg-blue-200 text-blue-900 px-2 py-0.5 rounded-full font-bold">0</span>
-        </div>
-        <div id="listDibongkar" class="space-y-3 flex-1 overflow-y-auto"></div>
-      </div>
+        <form id="queueForm" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Vendor</label>
+            <select id="vendorSelect" required class="w-full border border-slate-300 p-2 rounded-lg text-sm bg-white outline-none focus:border-blue-600">
+              <option value="">Memuat vendor...</option>
+            </select>
+          </div>
 
-      <!-- Kolom: Selesai -->
-      <div class="bg-emerald-50/70 border border-emerald-200 rounded-xl p-4 flex flex-col">
-        <div class="flex justify-between items-center mb-3">
-          <h3 class="font-bold text-emerald-900 text-sm flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> 3. Selesai Bongkar
-          </h3>
-          <span id="countSelesai" class="text-xs bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full font-bold">0</span>
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Jenis Kendaraan</label>
+            <select id="vehicleSelect" required class="w-full border border-slate-300 p-2 rounded-lg text-sm bg-white outline-none focus:border-blue-600">
+              <option value="">Memuat jenis armada...</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">No. Polisi Truk</label>
+            <input type="text" id="plateNumber" placeholder="Contoh: L 1234 AB" required class="w-full border border-slate-300 p-2 rounded-lg text-sm uppercase outline-none focus:border-blue-600">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Muatan / Barang</label>
+            <select id="materialSelect" required class="w-full border border-slate-300 p-2 rounded-lg text-sm bg-white outline-none focus:border-blue-600">
+              <option value="">Memuat muatan...</option>
+            </select>
+          </div>
+
+          <div class="sm:col-span-4 flex justify-end mt-1">
+            <button type="submit" id="btnSubmitQueue" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-lg text-sm transition shadow-sm">
+              + Generate ID Tiket & Antrekan
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Board Status Antrean Tiga Kolom -->
+      <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        
+        <!-- Kolom 1: Menunggu -->
+        <div class="bg-amber-50/70 border border-amber-200 rounded-xl p-4 flex flex-col">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="font-bold text-amber-900 text-sm flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> 1. Menunggu Antrean
+            </h3>
+            <span id="countMenunggu" class="text-xs bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-bold">0</span>
+          </div>
+          <div id="listMenunggu" class="space-y-3 flex-1 overflow-y-auto"></div>
         </div>
-        <div id="listSelesai" class="space-y-3 flex-1 overflow-y-auto max-h-[500px]"></div>
+
+        <!-- Kolom 2: Dibongkar -->
+        <div class="bg-blue-50/70 border border-blue-200 rounded-xl p-4 flex flex-col">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="font-bold text-blue-900 text-sm flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span> 2. Sedang Dibongkar
+            </h3>
+            <span id="countDibongkar" class="text-xs bg-blue-200 text-blue-900 px-2 py-0.5 rounded-full font-bold">0</span>
+          </div>
+          <div id="listDibongkar" class="space-y-3 flex-1 overflow-y-auto"></div>
+        </div>
+
+        <!-- Kolom 3: Selesai -->
+        <div class="bg-emerald-50/70 border border-emerald-200 rounded-xl p-4 flex flex-col">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="font-bold text-emerald-900 text-sm flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> 3. Selesai Bongkar
+            </h3>
+            <span id="countSelesai" class="text-xs bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full font-bold">0</span>
+          </div>
+          <div id="listSelesai" class="space-y-3 flex-1 overflow-y-auto max-h-[500px]"></div>
+        </div>
+
+      </section>
+    </div>
+
+    <!-- ================= HALAMAN 2: MANAJEMEN MASTER DATA (KHUSUS ADMIN) ================= -->
+    <div id="viewMaster" class="hidden space-y-6">
+      
+      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+        <h2 class="text-base font-bold text-slate-800">Pusat Data Master Logistik</h2>
+        <p class="text-xs text-slate-500 mb-4">Setiap data baru yang Anda tambahkan di sini akan langsung menjadi opsi pada form pos gerbang.</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          <!-- Master Vendor -->
+          <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+            <h3 class="text-xs font-bold uppercase text-slate-700 mb-2">1. Master Vendor</h3>
+            <div class="flex gap-2 mb-3">
+              <input type="text" id="newVendor" placeholder="Nama Vendor Baru" class="flex-1 border p-1.5 rounded text-xs outline-none focus:border-blue-600">
+              <button onclick="addMaster('master_vendors', 'newVendor')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded font-medium">Tambah</button>
+            </div>
+            <ul id="masterVendorList" class="space-y-1.5 text-xs max-h-48 overflow-y-auto divide-y divide-slate-200 bg-white p-2 rounded border border-slate-200"></ul>
+          </div>
+
+          <!-- Master Kendaraan -->
+          <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+            <h3 class="text-xs font-bold uppercase text-slate-700 mb-2">2. Master Jenis Armada</h3>
+            <div class="flex gap-2 mb-3">
+              <input type="text" id="newVehicle" placeholder="Jenis Truk Baru" class="flex-1 border p-1.5 rounded text-xs outline-none focus:border-blue-600">
+              <button onclick="addMaster('master_vehicle_types', 'newVehicle')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded font-medium">Tambah</button>
+            </div>
+            <ul id="masterVehicleList" class="space-y-1.5 text-xs max-h-48 overflow-y-auto divide-y divide-slate-200 bg-white p-2 rounded border border-slate-200"></ul>
+          </div>
+
+          <!-- Master Muatan -->
+          <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+            <h3 class="text-xs font-bold uppercase text-slate-700 mb-2">3. Master Muatan / Barang</h3>
+            <div class="flex gap-2 mb-3">
+              <input type="text" id="newMaterial" placeholder="Nama Muatan Baru" class="flex-1 border p-1.5 rounded text-xs outline-none focus:border-blue-600">
+              <button onclick="addMaster('master_materials', 'newMaterial')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded font-medium">Tambah</button>
+            </div>
+            <ul id="masterMaterialList" class="space-y-1.5 text-xs max-h-48 overflow-y-auto divide-y divide-slate-200 bg-white p-2 rounded border border-slate-200"></ul>
+          </div>
+
+        </div>
       </div>
 
     </div>
-  </div>
+
+  </main>
 
   <script>
     const SUPABASE_URL = "https://qayfxxiqcyuigvytysmc.supabase.co";
-    // Gunakan publishable key Anda
+    // Gunakan publishable key milik Anda
     const SUPABASE_KEY = "sb_publishable_2O0mA4TLwdB95scC9Im6IQ_hHmaKNEJ";
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // 1. Ambil Master Data untuk Dropdown Form
-    async function loadMasterData() {
-      const [vRes, cRes, mRes] = await Promise.all([
-        db.from('master_vendors').select('name').order('name'),
-        db.from('master_vehicle_types').select('name').order('name'),
-        db.from('master_materials').select('name').order('name')
-      ]);
+    let currentRole = 'security';
 
-      if (vRes.data) {
-        document.getElementById('vendorSelect').innerHTML = 
-          '<option value="">-- Pilih Vendor --</option>' + 
-          vRes.data.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+    // 1. Logika Pergantian Role (ID Masuk)
+    function switchRole(role) {
+      currentRole = role;
+      const secSection = document.getElementById('securityInputSection');
+      const adminTabs = document.getElementById('adminTabBar');
+
+      if (role === 'mandor') {
+        secSection.classList.add('hidden'); // Mandor tidak perlu form input
+        adminTabs.classList.add('hidden');
+        showTab('antrean');
+      } else if (role === 'security') {
+        secSection.classList.remove('hidden');
+        adminTabs.classList.add('hidden');
+        showTab('antrean');
+      } else if (role === 'admin') {
+        secSection.classList.remove('hidden');
+        adminTabs.classList.remove('hidden');
       }
+      fetchQueues();
+    }
 
-      if (cRes.data) {
-        document.getElementById('vehicleSelect').innerHTML = 
-          '<option value="">-- Pilih Jenis Armada --</option>' + 
-          cRes.data.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-      }
+    function showTab(tab) {
+      const vAntrean = document.getElementById('viewAntrean');
+      const vMaster = document.getElementById('viewMaster');
+      const btnAntrean = document.getElementById('tabBtnAntrean');
+      const btnMaster = document.getElementById('tabBtnMaster');
 
-      if (mRes.data) {
-        document.getElementById('materialSelect').innerHTML = 
-          '<option value="">-- Pilih Muatan --</option>' + 
-          mRes.data.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+      if (tab === 'antrean') {
+        vAntrean.classList.remove('hidden');
+        vMaster.classList.add('hidden');
+        btnAntrean.className = "px-4 py-2 text-xs font-bold border-b-2 border-blue-600 text-blue-600";
+        btnMaster.className = "px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800";
+      } else {
+        vAntrean.classList.add('hidden');
+        vMaster.classList.remove('hidden');
+        btnMaster.className = "px-4 py-2 text-xs font-bold border-b-2 border-blue-600 text-blue-600";
+        btnAntrean.className = "px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800";
       }
     }
 
-    // 2. Ambil & Render Daftar Antrean
+    // 2. Muat Master Data ke Dropdown & List Kelola
+    async function loadMasterData() {
+      const [vRes, cRes, mRes] = await Promise.all([
+        db.from('master_vendors').select('*').order('name'),
+        db.from('master_vehicle_types').select('*').order('name'),
+        db.from('master_materials').select('*').order('name')
+      ]);
+
+      // Isi Dropdown Security
+      if (vRes.data) {
+        document.getElementById('vendorSelect').innerHTML = '<option value="">-- Pilih Vendor --</option>' + 
+          vRes.data.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+        document.getElementById('masterVendorList').innerHTML = vRes.data.map(v => 
+          `<li class="flex justify-between items-center py-1"><span>${v.name}</span><button onclick="deleteMaster('master_vendors', ${v.id})" class="text-red-500 hover:text-red-700 text-[10px]">Hapus</button></li>`
+        ).join('') || '<li class="text-slate-400 italic">Belum ada data</li>';
+      }
+
+      if (cRes.data) {
+        document.getElementById('vehicleSelect').innerHTML = '<option value="">-- Pilih Jenis Armada --</option>' + 
+          cRes.data.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+        document.getElementById('masterVehicleList').innerHTML = cRes.data.map(c => 
+          `<li class="flex justify-between items-center py-1"><span>${c.name}</span><button onclick="deleteMaster('master_vehicle_types', ${c.id})" class="text-red-500 hover:text-red-700 text-[10px]">Hapus</button></li>`
+        ).join('') || '<li class="text-slate-400 italic">Belum ada data</li>';
+      }
+
+      if (mRes.data) {
+        document.getElementById('materialSelect').innerHTML = '<option value="">-- Pilih Muatan --</option>' + 
+          mRes.data.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+        document.getElementById('masterMaterialList').innerHTML = mRes.data.map(m => 
+          `<li class="flex justify-between items-center py-1"><span>${m.name}</span><button onclick="deleteMaster('master_materials', ${m.id})" class="text-red-500 hover:text-red-700 text-[10px]">Hapus</button></li>`
+        ).join('') || '<li class="text-slate-400 italic">Belum ada data</li>';
+      }
+    }
+
+    // 3. Tambah & Hapus Master Data
+    async function addMaster(table, inputId) {
+      const input = document.getElementById(inputId);
+      const val = input.value.trim();
+      if (!val) return;
+
+      const { error } = await db.from(table).insert([{ name: val }]);
+      if (error) {
+        alert('Gagal menambah master: ' + error.message);
+      } else {
+        input.value = '';
+        await loadMasterData();
+      }
+    }
+
+    async function deleteMaster(table, id) {
+      if (!confirm('Hapus item master ini?')) return;
+      const { error } = await db.from(table).delete().eq('id', id);
+      if (error) alert(error.message);
+      else loadMasterData();
+    }
+
+    // 4. Ambil & Render Antrean
     async function fetchQueues() {
       const { data, error } = await db
         .from('vendor_queues')
@@ -143,7 +289,7 @@
         .order('id', { ascending: true });
 
       if (error) {
-        alert('Gagal mengambil data: ' + error.message);
+        console.error(error);
         return;
       }
 
@@ -175,38 +321,44 @@
       document.getElementById('countSelesai').innerText = c3;
 
       if (c1 === 0) listMenunggu.innerHTML = '<p class="text-xs text-slate-400 italic text-center py-4">Tidak ada antrean</p>';
-      if (c2 === 0) listDibongkar.innerHTML = '<p class="text-xs text-slate-400 italic text-center py-4">Tidak ada pembongkaran aktif</p>';
-      if (c3 === 0) listSelesai.innerHTML = '<p class="text-xs text-slate-400 italic text-center py-4">Belum ada yang selesai</p>';
+      if (c2 === 0) listDibongkar.innerHTML = '<p class="text-xs text-slate-400 italic text-center py-4">Tidak ada pembongkaran</p>';
+      if (c3 === 0) listSelesai.innerHTML = '<p class="text-xs text-slate-400 italic text-center py-4">Belum ada riwayat selesai</p>';
     }
 
-    // 3. Template Kartu Truk
+    // 5. Template Card
     function createCard(item, stage) {
-      let actionButton = '';
-      if (stage === 'mulai') {
-        actionButton = `
-          <button onclick="updateStatus(${item.id}, 'Dibongkar')" class="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs py-2 rounded-lg transition">
-            Mulai Masuk Bongkar →
-          </button>
-        `;
-      } else if (stage === 'selesai') {
-        actionButton = `
-          <button onclick="updateStatus(${item.id}, 'Selesai')" class="w-full mt-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs py-2 rounded-lg transition">
-            Tandai Selesai ✓
-          </button>
-        `;
-      } else {
-        actionButton = `
+      let actionArea = '';
+
+      // Hak Akses Tombol: Hanya Mandor & Admin yang boleh merubah status bongkar
+      if (currentRole === 'mandor' || currentRole === 'admin') {
+        if (stage === 'mulai') {
+          actionArea = `
+            <button onclick="updateStatus(${item.id}, 'Dibongkar')" class="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs py-2 rounded-lg transition shadow-sm">
+              Mulai Masuk Bongkar →
+            </button>
+          `;
+        } else if (stage === 'selesai') {
+          actionArea = `
+            <button onclick="updateStatus(${item.id}, 'Selesai')" class="w-full mt-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs py-2 rounded-lg transition shadow-sm">
+              Tandai Selesai ✓
+            </button>
+          `;
+        }
+      }
+
+      if (currentRole === 'admin' && stage === 'tuntas') {
+        actionArea = `
           <div class="mt-2 pt-2 border-t border-slate-100 flex justify-between items-center text-[11px] text-slate-400">
-            <span>Selesai Bongkar</span>
-            <button onclick="deleteQueue(${item.id})" class="text-red-400 hover:text-red-600">Hapus</button>
+            <span>Tuntas</span>
+            <button onclick="deleteQueue(${item.id})" class="text-red-500 hover:underline">Hapus Log</button>
           </div>
         `;
       }
 
       return `
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-sm">
-          <div class="flex justify-between items-start gap-2 mb-2">
-            <span class="bg-blue-100 text-blue-800 text-xs font-mono font-bold px-2 py-0.5 rounded">
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm text-sm">
+          <div class="flex justify-between items-center mb-2">
+            <span class="bg-slate-900 text-white text-[11px] font-mono font-bold px-2 py-0.5 rounded">
               ${item.queue_code}
             </span>
             <span class="text-xs font-bold text-slate-800 font-mono tracking-wider bg-slate-100 px-2 py-0.5 rounded">
@@ -215,30 +367,28 @@
           </div>
 
           <div class="space-y-1 text-xs text-slate-600">
-            <p><span class="text-slate-400">Vendor:</span> <strong class="text-slate-700">${item.vendor_name}</strong></p>
-            <p><span class="text-slate-400">Armada:</span> <strong class="text-slate-700">${item.vehicle_type}</strong></p>
-            <p><span class="text-slate-400">Muatan:</span> <strong class="text-slate-700">${item.material}</strong></p>
+            <p><span class="text-slate-400">Vendor:</span> <strong class="text-slate-800">${item.vendor_name}</strong></p>
+            <p><span class="text-slate-400">Armada:</span> <strong class="text-slate-800">${item.vehicle_type}</strong></p>
+            <p><span class="text-slate-400">Muatan:</span> <strong class="text-slate-800">${item.material}</strong></p>
           </div>
-          ${actionButton}
+          ${actionArea}
         </div>
       `;
     }
 
-    // 4. Submit Pendaftaran Truk Masuk (Generate ID Antrean Otomatis)
+    // 6. Submit Truk Masuk (Generate Tiket Antrean)
     document.getElementById('queueForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const btn = document.getElementById('btnSubmit');
+      const btn = document.getElementById('btnSubmitQueue');
       btn.disabled = true;
-      btn.innerText = 'Memproses ID...';
+      btn.innerText = 'Memproses...';
 
-      // Buat format ID: Q-YYYYMMDD-Detik (Contoh: Q-20261031-842)
       const now = new Date();
-      const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
-      const timeStr = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0') + String(now.getSeconds()).padStart(2, '0');
-      const generatedQueueCode = `Q-${dateStr}-${timeStr.slice(2, 6)}`;
+      const timeCode = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0') + String(now.getSeconds()).padStart(2, '0');
+      const queueCode = `TRK-${timeCode}`;
 
       const payload = {
-        queue_code: generatedQueueCode,
+        queue_code: queueCode,
         vendor_name: document.getElementById('vendorSelect').value,
         vehicle_type: document.getElementById('vehicleSelect').value,
         plate_number: document.getElementById('plateNumber').value.trim().toUpperCase(),
@@ -249,17 +399,17 @@
       const { error } = await db.from('vendor_queues').insert([payload]);
 
       if (error) {
-        alert('Gagal simpan antrean: ' + error.message);
+        alert('Gagal simpan: ' + error.message);
       } else {
-        document.getElementById('queueForm').reset();
+        document.getElementById('plateNumber').value = '';
         await fetchQueues();
       }
 
       btn.disabled = false;
-      btn.innerText = '+ Generate ID Antrean & Masukkan';
+      btn.innerText = '+ Generate ID Tiket & Antrekan';
     });
 
-    // 5. Update Status
+    // 7. Aksi Update Status
     async function updateStatus(id, newStatus) {
       const { error } = await db
         .from('vendor_queues')
@@ -270,15 +420,14 @@
       else fetchQueues();
     }
 
-    // 6. Hapus Data
     async function deleteQueue(id) {
-      if (!confirm('Hapus antrean ini?')) return;
+      if (!confirm('Hapus riwayat antrean ini?')) return;
       const { error } = await db.from('vendor_queues').delete().eq('id', id);
       if (error) alert(error.message);
       else fetchQueues();
     }
 
-    // Eksekusi awal
+    // Inisialisasi awal
     loadMasterData();
     fetchQueues();
   </script>
