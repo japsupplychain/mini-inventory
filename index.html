@@ -3,81 +3,100 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistem Antrean Truk Vendor</title>
+  <title>Sistem Antrean Bongkar Truk</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen p-4 sm:p-6">
 
-  <div class="max-w-5xl mx-auto space-y-6">
+  <div class="max-w-6xl mx-auto space-y-6">
     <!-- Header -->
     <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-5 rounded-xl border border-slate-200 shadow-sm gap-4">
       <div>
-        <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Antrean Bongkar Muat Vendor</h1>
-        <p class="text-xs sm:text-sm text-slate-500">Monitoring status truk di area logistik secara real-time</p>
+        <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Antrean Bongkar Muat Logistik</h1>
+        <p class="text-xs sm:text-sm text-slate-500">Monitoring alur truk vendor: Menunggu -> Dibongkar -> Selesai</p>
       </div>
-      <button onclick="fetchQueues()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-medium px-4 py-2 rounded-lg transition">
-        Refresh Status
+      <button onclick="fetchQueues()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold px-4 py-2 rounded-lg transition">
+        Refresh Data
       </button>
     </header>
 
-    <!-- Form Pendaftaran Truk Datang -->
+    <!-- Form Registrasi Truk -->
     <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-      <h2 class="text-sm font-semibold uppercase text-slate-500 mb-3 tracking-wider">Registrasi Truk Masuk (Security / Logistik)</h2>
+      <h2 class="text-xs font-bold uppercase text-slate-500 mb-3 tracking-wider">Input Kendaraan Masuk</h2>
       <form id="queueForm" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-        <input type="text" id="vendorName" placeholder="Nama Vendor / Supplier" required class="border border-slate-300 p-2.5 rounded-lg text-sm outline-none focus:border-blue-600">
-        <input type="text" id="driverName" placeholder="Nama Supir" required class="border border-slate-300 p-2.5 rounded-lg text-sm outline-none focus:border-blue-600">
-        <input type="text" id="plateNumber" placeholder="No. Polisi Truk (cth: L 1234 AB)" required class="border border-slate-300 p-2.5 rounded-lg text-sm uppercase outline-none focus:border-blue-600">
-        <input type="text" id="material" placeholder="Muatan / Barang" required class="border border-slate-300 p-2.5 rounded-lg text-sm outline-none focus:border-blue-600">
-        
-        <div class="sm:col-span-4 flex justify-end mt-1">
+        <!-- Master Vendor Dropdown -->
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Pilih Vendor</label>
+          <select id="vendorSelect" required class="w-full border border-slate-300 p-2.5 rounded-lg text-sm bg-white outline-none focus:border-blue-600">
+            <option value="">Memuat vendor...</option>
+          </select>
+        </div>
+
+        <!-- Master Jenis Mobil Dropdown -->
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Jenis Kendaraan</label>
+          <select id="vehicleSelect" required class="w-full border border-slate-300 p-2.5 rounded-lg text-sm bg-white outline-none focus:border-blue-600">
+            <option value="">Memuat jenis armada...</option>
+          </select>
+        </div>
+
+        <!-- No Polisi Truk -->
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">No. Polisi Truk</label>
+          <input type="text" id="plateNumber" placeholder="Contoh: L 1234 AB" required class="w-full border border-slate-300 p-2.5 rounded-lg text-sm uppercase outline-none focus:border-blue-600">
+        </div>
+
+        <!-- Master Barang Dropdown -->
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Jenis Muatan / Barang</label>
+          <select id="materialSelect" required class="w-full border border-slate-300 p-2.5 rounded-lg text-sm bg-white outline-none focus:border-blue-600">
+            <option value="">Memuat barang...</option>
+          </select>
+        </div>
+
+        <div class="sm:col-span-4 flex justify-end mt-2">
           <button type="submit" id="btnSubmit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-lg text-sm transition">
-            + Tambah ke Antrean
+            + Generate ID Antrean & Masukkan
           </button>
         </div>
       </form>
     </div>
 
-    <!-- Board Status Antrean -->
+    <!-- Board Status Antrean (Kanban-Style) -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       
       <!-- Kolom: Menunggu -->
-      <div class="bg-amber-50/60 border border-amber-200 rounded-xl p-4 flex flex-col">
+      <div class="bg-amber-50/70 border border-amber-200 rounded-xl p-4 flex flex-col">
         <div class="flex justify-between items-center mb-3">
           <h3 class="font-bold text-amber-900 text-sm flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> 1. Menunggu Antrean
           </h3>
           <span id="countMenunggu" class="text-xs bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-bold">0</span>
         </div>
-        <div id="listMenunggu" class="space-y-3 flex-1 overflow-y-auto">
-          <!-- Card Render Disini -->
-        </div>
+        <div id="listMenunggu" class="space-y-3 flex-1 overflow-y-auto"></div>
       </div>
 
-      <!-- Kolom: Proses Bongkar -->
-      <div class="bg-blue-50/60 border border-blue-200 rounded-xl p-4 flex flex-col">
+      <!-- Kolom: Sedang Dibongkar -->
+      <div class="bg-blue-50/70 border border-blue-200 rounded-xl p-4 flex flex-col">
         <div class="flex justify-between items-center mb-3">
           <h3 class="font-bold text-blue-900 text-sm flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span> 2. Sedang Dibongkar
           </h3>
           <span id="countDibongkar" class="text-xs bg-blue-200 text-blue-900 px-2 py-0.5 rounded-full font-bold">0</span>
         </div>
-        <div id="listDibongkar" class="space-y-3 flex-1 overflow-y-auto">
-          <!-- Card Render Disini -->
-        </div>
+        <div id="listDibongkar" class="space-y-3 flex-1 overflow-y-auto"></div>
       </div>
 
       <!-- Kolom: Selesai -->
-      <div class="bg-emerald-50/60 border border-emerald-200 rounded-xl p-4 flex flex-col">
+      <div class="bg-emerald-50/70 border border-emerald-200 rounded-xl p-4 flex flex-col">
         <div class="flex justify-between items-center mb-3">
           <h3 class="font-bold text-emerald-900 text-sm flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> 3. Selesai Bongkar
           </h3>
           <span id="countSelesai" class="text-xs bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full font-bold">0</span>
         </div>
-        <div id="listSelesai" class="space-y-3 flex-1 overflow-y-auto max-h-[500px]">
-          <!-- Card Render Disini -->
-        </div>
+        <div id="listSelesai" class="space-y-3 flex-1 overflow-y-auto max-h-[500px]"></div>
       </div>
 
     </div>
@@ -85,11 +104,38 @@
 
   <script>
     const SUPABASE_URL = "https://qayfxxiqcyuigvytysmc.supabase.co";
-    // Gunakan publishable key milik Anda sebelumnya
+    // Gunakan publishable key Anda
     const SUPABASE_KEY = "sb_publishable_2O0mA4TLwdB95scC9Im6IQ_hHmaKNEJ";
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Ambil Data Antrean
+    // 1. Ambil Master Data untuk Dropdown Form
+    async function loadMasterData() {
+      const [vRes, cRes, mRes] = await Promise.all([
+        db.from('master_vendors').select('name').order('name'),
+        db.from('master_vehicle_types').select('name').order('name'),
+        db.from('master_materials').select('name').order('name')
+      ]);
+
+      if (vRes.data) {
+        document.getElementById('vendorSelect').innerHTML = 
+          '<option value="">-- Pilih Vendor --</option>' + 
+          vRes.data.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+      }
+
+      if (cRes.data) {
+        document.getElementById('vehicleSelect').innerHTML = 
+          '<option value="">-- Pilih Jenis Armada --</option>' + 
+          cRes.data.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+      }
+
+      if (mRes.data) {
+        document.getElementById('materialSelect').innerHTML = 
+          '<option value="">-- Pilih Muatan --</option>' + 
+          mRes.data.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+      }
+    }
+
+    // 2. Ambil & Render Daftar Antrean
     async function fetchQueues() {
       const { data, error } = await db
         .from('vendor_queues')
@@ -97,7 +143,7 @@
         .order('id', { ascending: true });
 
       if (error) {
-        alert('Gagal mengambil antrean: ' + error.message);
+        alert('Gagal mengambil data: ' + error.message);
         return;
       }
 
@@ -133,57 +179,70 @@
       if (c3 === 0) listSelesai.innerHTML = '<p class="text-xs text-slate-400 italic text-center py-4">Belum ada yang selesai</p>';
     }
 
-    // Template Card Truk
+    // 3. Template Kartu Truk
     function createCard(item, stage) {
       let actionButton = '';
       if (stage === 'mulai') {
         actionButton = `
-          <button onclick="updateStatus(${item.id}, 'Dibongkar')" class="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs py-1.5 rounded transition">
+          <button onclick="updateStatus(${item.id}, 'Dibongkar')" class="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs py-2 rounded-lg transition">
             Mulai Masuk Bongkar →
           </button>
         `;
       } else if (stage === 'selesai') {
         actionButton = `
-          <button onclick="updateStatus(${item.id}, 'Selesai')" class="w-full mt-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs py-1.5 rounded transition">
+          <button onclick="updateStatus(${item.id}, 'Selesai')" class="w-full mt-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs py-2 rounded-lg transition">
             Tandai Selesai ✓
           </button>
         `;
       } else {
         actionButton = `
           <div class="mt-2 pt-2 border-t border-slate-100 flex justify-between items-center text-[11px] text-slate-400">
-            <span>Selesai</span>
+            <span>Selesai Bongkar</span>
             <button onclick="deleteQueue(${item.id})" class="text-red-400 hover:text-red-600">Hapus</button>
           </div>
         `;
       }
 
       return `
-        <div class="bg-white p-3.5 rounded-lg border border-slate-200 shadow-sm text-sm">
-          <div class="flex justify-between items-start">
-            <span class="font-mono font-bold text-slate-800 uppercase tracking-wide">${item.plate_number}</span>
-            <span class="text-[11px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">${item.vendor_name}</span>
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-sm">
+          <div class="flex justify-between items-start gap-2 mb-2">
+            <span class="bg-blue-100 text-blue-800 text-xs font-mono font-bold px-2 py-0.5 rounded">
+              ${item.queue_code}
+            </span>
+            <span class="text-xs font-bold text-slate-800 font-mono tracking-wider bg-slate-100 px-2 py-0.5 rounded">
+              ${item.plate_number}
+            </span>
           </div>
-          <div class="mt-1 text-xs text-slate-600">
-            <p><strong>Supir:</strong> ${item.driver_name}</p>
-            <p><strong>Muatan:</strong> ${item.material}</p>
+
+          <div class="space-y-1 text-xs text-slate-600">
+            <p><span class="text-slate-400">Vendor:</span> <strong class="text-slate-700">${item.vendor_name}</strong></p>
+            <p><span class="text-slate-400">Armada:</span> <strong class="text-slate-700">${item.vehicle_type}</strong></p>
+            <p><span class="text-slate-400">Muatan:</span> <strong class="text-slate-700">${item.material}</strong></p>
           </div>
           ${actionButton}
         </div>
       `;
     }
 
-    // Tambah Antrean Masuk
+    // 4. Submit Pendaftaran Truk Masuk (Generate ID Antrean Otomatis)
     document.getElementById('queueForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('btnSubmit');
       btn.disabled = true;
-      btn.innerText = 'Menyimpan...';
+      btn.innerText = 'Memproses ID...';
+
+      // Buat format ID: Q-YYYYMMDD-Detik (Contoh: Q-20261031-842)
+      const now = new Date();
+      const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+      const timeStr = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0') + String(now.getSeconds()).padStart(2, '0');
+      const generatedQueueCode = `Q-${dateStr}-${timeStr.slice(2, 6)}`;
 
       const payload = {
-        vendor_name: document.getElementById('vendorName').value,
-        driver_name: document.getElementById('driverName').value,
-        plate_number: document.getElementById('plateNumber').value.toUpperCase(),
-        material: document.getElementById('material').value,
+        queue_code: generatedQueueCode,
+        vendor_name: document.getElementById('vendorSelect').value,
+        vehicle_type: document.getElementById('vehicleSelect').value,
+        plate_number: document.getElementById('plateNumber').value.trim().toUpperCase(),
+        material: document.getElementById('materialSelect').value,
         status: 'Menunggu'
       };
 
@@ -197,10 +256,10 @@
       }
 
       btn.disabled = false;
-      btn.innerText = '+ Tambah ke Antrean';
+      btn.innerText = '+ Generate ID Antrean & Masukkan';
     });
 
-    // Update Status Truk (Menunggu -> Dibongkar -> Selesai)
+    // 5. Update Status
     async function updateStatus(id, newStatus) {
       const { error } = await db
         .from('vendor_queues')
@@ -211,15 +270,16 @@
       else fetchQueues();
     }
 
-    // Hapus Data Selesai
+    // 6. Hapus Data
     async function deleteQueue(id) {
-      if (!confirm('Hapus riwayat antrean ini?')) return;
+      if (!confirm('Hapus antrean ini?')) return;
       const { error } = await db.from('vendor_queues').delete().eq('id', id);
       if (error) alert(error.message);
       else fetchQueues();
     }
 
-    // Jalankan awal
+    // Eksekusi awal
+    loadMasterData();
     fetchQueues();
   </script>
 </body>
