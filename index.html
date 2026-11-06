@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistem Gate & Dock Control - Logistik</title>
+  <title>Smart Dock & Yard Management</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -13,19 +13,18 @@
   <header class="bg-slate-900 text-white shadow sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
       <div>
-        <h1 class="text-base sm:text-lg font-bold tracking-tight flex items-center gap-2">
-          🚛 Smart Dock & Yard Control
+        <h1 id="appTitle" class="text-base sm:text-lg font-bold tracking-tight flex items-center gap-2">
+          🚛 Smart Dock Control
         </h1>
-        <p class="text-[11px] text-slate-400">Monitoring Antrean Bongkar & Muat Terintegrasi</p>
+        <p id="appSubtitle" class="text-[11px] text-slate-400">Portal Antrean Terintegrasi</p>
       </div>
 
-      <!-- Tab Navigasi & Filter Divisi Global -->
       <div class="flex flex-wrap items-center gap-3">
-        <div class="flex items-center gap-1.5 bg-slate-800 p-1 rounded-lg border border-slate-700">
-          <span class="text-[11px] text-slate-400 pl-1">Divisi:</span>
-          <select id="globalDivisionFilter" onchange="filterBoardByDivision()" class="bg-slate-900 text-white text-xs font-semibold px-2 py-1 rounded outline-none border border-slate-600 focus:border-blue-400">
-            <option value="ALL">Semua Divisi</option>
-          </select>
+        <!-- Badge Mode Terkunci Divisi -->
+        <div id="divisionLockBadge" class="hidden items-center gap-2 bg-blue-900/80 border border-blue-600 px-3 py-1 rounded-lg text-xs font-semibold text-blue-200">
+          <span>Terkunci ke:</span>
+          <span id="lockedDivisionName" class="text-white font-bold underline"></span>
+          <a href="./" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded ml-1">Buka Semua Divisi ↗</a>
         </div>
 
         <nav class="flex bg-slate-800 p-1 rounded-lg border border-slate-700 text-xs">
@@ -33,7 +32,7 @@
             Board Antrean
           </button>
           <button onclick="switchTab('rekap')" id="tabBtnRekap" class="px-3 py-1 font-medium text-slate-300 hover:text-white rounded transition">
-            Rekap & Filter Periode
+            Rekap & Periode
           </button>
           <button onclick="switchTab('master')" id="tabBtnMaster" class="px-3 py-1 font-medium text-slate-300 hover:text-white rounded transition">
             Kelola Master
@@ -48,16 +47,22 @@
     <!-- ================= HALAMAN 1: BOARD ANTREAN ================= -->
     <section id="viewBoard" class="space-y-6">
       
-      <!-- Form Input Registrasi Truk -->
+      <!-- Form Input Truk Masuk -->
       <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-        <h2 class="text-xs font-bold uppercase text-slate-500 mb-3 tracking-wider">
-          Registrasi Kedatangan Truk (Pos Masuk)
-        </h2>
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="text-xs font-bold uppercase text-slate-500 tracking-wider">
+            Registrasi Kedatangan Armada (Pos Gerbang)
+          </h2>
+          <span id="formDivisionIndicator" class="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200">
+            Semua Divisi
+          </span>
+        </div>
+
         <form id="queueForm" class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-6 gap-3">
-          <!-- Divisi -->
+          <!-- Pilih Divisi -->
           <div>
             <label class="block text-xs font-medium text-slate-600 mb-1">Tujuan Divisi</label>
-            <select id="inputDivision" required class="w-full border border-slate-300 p-2 rounded-lg text-xs bg-white outline-none focus:border-blue-600">
+            <select id="inputDivision" required onchange="onDivisionChange()" class="w-full border border-slate-300 p-2 rounded-lg text-xs bg-white outline-none focus:border-blue-600">
               <option value="">Memuat...</option>
             </select>
           </div>
@@ -71,15 +76,15 @@
             </select>
           </div>
 
-          <!-- Vendor / Ekspedisi -->
+          <!-- Vendor (Otomatis Sesuai Divisi) -->
           <div>
             <label class="block text-xs font-medium text-slate-600 mb-1">Vendor / Ekspedisi</label>
             <select id="inputVendor" required class="w-full border border-slate-300 p-2 rounded-lg text-xs bg-white outline-none focus:border-blue-600">
-              <option value="">Memuat...</option>
+              <option value="">Pilih divisi dulu...</option>
             </select>
           </div>
 
-          <!-- Jenis Mobil -->
+          <!-- Jenis Mobil (Global) -->
           <div>
             <label class="block text-xs font-medium text-slate-600 mb-1">Jenis Armada</label>
             <select id="inputVehicle" required class="w-full border border-slate-300 p-2 rounded-lg text-xs bg-white outline-none focus:border-blue-600">
@@ -93,17 +98,17 @@
             <input type="text" id="inputPlate" placeholder="Cth: L 1234 AB" required class="w-full border border-slate-300 p-2 rounded-lg text-xs uppercase outline-none focus:border-blue-600">
           </div>
 
-          <!-- Muatan / Barang -->
+          <!-- Muatan (Otomatis Sesuai Divisi) -->
           <div>
-            <label class="block text-xs font-medium text-slate-600 mb-1">Jenis Muatan</label>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Jenis Muatan / Barang</label>
             <select id="inputMaterial" required class="w-full border border-slate-300 p-2 rounded-lg text-xs bg-white outline-none focus:border-blue-600">
-              <option value="">Memuat...</option>
+              <option value="">Pilih divisi dulu...</option>
             </select>
           </div>
 
           <div class="sm:col-span-3 md:col-span-6 flex justify-end mt-1">
-            <button type="submit" id="btnSubmitQueue" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2 rounded-lg text-xs transition shadow-sm">
-              + Generate ID & Antrekan Kendaraan
+            <button type="submit" id="btnSubmitQueue" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-lg text-xs transition shadow-sm">
+              + Generate Tiket & Antrekan
             </button>
           </div>
         </form>
@@ -123,11 +128,11 @@
           <div id="colMenunggu" class="space-y-3 flex-1 overflow-y-auto"></div>
         </div>
 
-        <!-- Kolom: Sedang Dikerjakan (Bongkar/Muat) -->
+        <!-- Kolom: Sedang Dikerjakan -->
         <div class="bg-blue-50/70 border border-blue-200 rounded-xl p-4 flex flex-col">
           <div class="flex justify-between items-center mb-3">
             <h3 class="font-bold text-blue-900 text-xs uppercase tracking-wider flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span> 2. Proses Bongkar / Muat
+              <span class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span> 2. Sedang Dikerjakan (Dock)
             </h3>
             <span id="badgeCountProses" class="text-xs bg-blue-200 text-blue-900 px-2 py-0.5 rounded-full font-bold">0</span>
           </div>
@@ -148,10 +153,10 @@
       </div>
     </section>
 
-    <!-- ================= HALAMAN 2: REKAP & FILTER PERIODE ================= -->
+    <!-- ================= HALAMAN 2: REKAP & PERIODE ================= -->
     <section id="viewRekap" class="hidden space-y-5">
       <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-        <h2 class="text-sm font-bold text-slate-800 mb-3">Filter Riwayat & Audit Performa Logistik</h2>
+        <h2 class="text-sm font-bold text-slate-800 mb-3">Filter Riwayat & Audit SLA</h2>
         
         <div class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-6 gap-3 text-xs">
           <div>
@@ -193,10 +198,9 @@
         </div>
       </div>
 
-      <!-- Tabel Hasil Rekap -->
       <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="p-4 border-b border-slate-200 flex justify-between items-center">
-          <h3 class="text-xs font-bold text-slate-700 uppercase">Data Transaksi Terfilter</h3>
+          <h3 class="text-xs font-bold text-slate-700 uppercase">Data Hasil Filter (Klik ID Tiket untuk Detail)</h3>
           <span id="rekapCount" class="text-xs text-slate-500">0 data ditemukan</span>
         </div>
         <div class="overflow-x-auto">
@@ -211,7 +215,7 @@
                 <th class="p-3">Muatan</th>
                 <th class="p-3">Durasi Antre</th>
                 <th class="p-3">Durasi Pengerjaan</th>
-                <th class="p-3">Total Waktu</th>
+                <th class="p-3">Total Lead Time</th>
                 <th class="p-3 text-center">Status</th>
               </tr>
             </thead>
@@ -226,49 +230,58 @@
     <!-- ================= HALAMAN 3: KELOLA MASTER DATA ================= -->
     <section id="viewMaster" class="hidden space-y-6">
       <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-        <h2 class="text-sm font-bold text-slate-800 mb-1">Manajemen Master Data Terintegrasi</h2>
-        <p class="text-xs text-slate-500 mb-5">Data yang ditambahkan di sini otomatis langsung menjadi opsi dropdown form pos gerbang.</p>
+        <h2 class="text-sm font-bold text-slate-800 mb-1">Manajemen Master Data Terisolasi</h2>
+        <p class="text-xs text-slate-500 mb-5">Vendor dan Muatan terikat khusus ke divisi masing-masing. Setiap divisi memiliki tautan portal kerja mandiri.</p>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-          <!-- Divisi -->
-          <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
-            <h3 class="font-bold mb-2">1. Master Divisi</h3>
-            <div class="flex gap-1.5 mb-2">
-              <input type="text" id="addDivisiVal" placeholder="Nama Divisi" class="flex-1 border p-1.5 rounded outline-none text-xs">
-              <button onclick="addMaster('master_divisions', 'addDivisiVal')" class="bg-blue-600 text-white px-2.5 rounded font-bold">+</button>
+          
+          <!-- Master Divisi + Fitur Copy Link Otomatis -->
+          <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 flex flex-col">
+            <h3 class="font-bold mb-1 text-slate-800">1. Master Divisi</h3>
+            <p class="text-[10px] text-slate-400 mb-2">Tautan URL otomatis tercipta</p>
+            <div class="space-y-1.5 mb-2">
+              <input type="text" id="addDivisiName" placeholder="Nama Divisi Baru" class="w-full border p-1.5 rounded outline-none text-xs">
+              <input type="text" id="addDivisiCode" placeholder="Kode URL (cth: packaging)" class="w-full border p-1.5 rounded outline-none text-xs font-mono">
+              <button onclick="addDivision()" class="w-full bg-blue-600 text-white p-1.5 rounded font-bold hover:bg-blue-700">+ Tambah Divisi</button>
             </div>
-            <ul id="masterDivisiUl" class="space-y-1 max-h-48 overflow-y-auto divide-y divide-slate-200 bg-white p-2 rounded border"></ul>
+            <ul id="masterDivisiUl" class="space-y-1.5 max-h-56 overflow-y-auto divide-y divide-slate-200 bg-white p-2 rounded border flex-1"></ul>
           </div>
 
-          <!-- Vendor -->
-          <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
-            <h3 class="font-bold mb-2">2. Master Vendor</h3>
-            <div class="flex gap-1.5 mb-2">
-              <input type="text" id="addVendorVal" placeholder="Nama Vendor" class="flex-1 border p-1.5 rounded outline-none text-xs">
-              <button onclick="addMaster('master_vendors', 'addVendorVal')" class="bg-blue-600 text-white px-2.5 rounded font-bold">+</button>
+          <!-- Master Vendor (Terikat Divisi) -->
+          <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 flex flex-col">
+            <h3 class="font-bold mb-1 text-slate-800">2. Master Vendor</h3>
+            <p class="text-[10px] text-slate-400 mb-2">Pilih divisi kepemilikan</p>
+            <div class="space-y-1.5 mb-2">
+              <select id="addVendorDivisi" class="w-full border p-1.5 rounded outline-none text-xs bg-white"></select>
+              <input type="text" id="addVendorName" placeholder="Nama Vendor / Supplier" class="w-full border p-1.5 rounded outline-none text-xs">
+              <button onclick="addVendor()" class="w-full bg-blue-600 text-white p-1.5 rounded font-bold hover:bg-blue-700">+ Tambah Vendor</button>
             </div>
-            <ul id="masterVendorUl" class="space-y-1 max-h-48 overflow-y-auto divide-y divide-slate-200 bg-white p-2 rounded border"></ul>
+            <ul id="masterVendorUl" class="space-y-1 max-h-56 overflow-y-auto divide-y divide-slate-200 bg-white p-2 rounded border flex-1"></ul>
           </div>
 
-          <!-- Jenis Mobil -->
-          <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
-            <h3 class="font-bold mb-2">3. Master Jenis Armada</h3>
+          <!-- Master Armada (Global) -->
+          <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 flex flex-col">
+            <h3 class="font-bold mb-1 text-slate-800">3. Jenis Armada (Global)</h3>
+            <p class="text-[10px] text-slate-400 mb-2">Berlaku untuk semua divisi</p>
             <div class="flex gap-1.5 mb-2">
               <input type="text" id="addVehicleVal" placeholder="Jenis Truk" class="flex-1 border p-1.5 rounded outline-none text-xs">
-              <button onclick="addMaster('master_vehicle_types', 'addVehicleVal')" class="bg-blue-600 text-white px-2.5 rounded font-bold">+</button>
+              <button onclick="addMasterGeneric('master_vehicle_types', 'addVehicleVal')" class="bg-blue-600 text-white px-3 rounded font-bold hover:bg-blue-700">+</button>
             </div>
-            <ul id="masterVehicleUl" class="space-y-1 max-h-48 overflow-y-auto divide-y divide-slate-200 bg-white p-2 rounded border"></ul>
+            <ul id="masterVehicleUl" class="space-y-1 max-h-56 overflow-y-auto divide-y divide-slate-200 bg-white p-2 rounded border flex-1"></ul>
           </div>
 
-          <!-- Muatan -->
-          <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
-            <h3 class="font-bold mb-2">4. Master Muatan</h3>
-            <div class="flex gap-1.5 mb-2">
-              <input type="text" id="addMaterialVal" placeholder="Jenis Muatan" class="flex-1 border p-1.5 rounded outline-none text-xs">
-              <button onclick="addMaster('master_materials', 'addMaterialVal')" class="bg-blue-600 text-white px-2.5 rounded font-bold">+</button>
+          <!-- Master Muatan (Terikat Divisi) -->
+          <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 flex flex-col">
+            <h3 class="font-bold mb-1 text-slate-800">4. Master Muatan / Barang</h3>
+            <p class="text-[10px] text-slate-400 mb-2">Pilih divisi kepemilikan</p>
+            <div class="space-y-1.5 mb-2">
+              <select id="addMaterialDivisi" class="w-full border p-1.5 rounded outline-none text-xs bg-white"></select>
+              <input type="text" id="addMaterialName" placeholder="Jenis Muatan" class="w-full border p-1.5 rounded outline-none text-xs">
+              <button onclick="addMaterial()" class="w-full bg-blue-600 text-white p-1.5 rounded font-bold hover:bg-blue-700">+ Tambah Muatan</button>
             </div>
-            <ul id="masterMaterialUl" class="space-y-1 max-h-48 overflow-y-auto divide-y divide-slate-200 bg-white p-2 rounded border"></ul>
+            <ul id="masterMaterialUl" class="space-y-1 max-h-56 overflow-y-auto divide-y divide-slate-200 bg-white p-2 rounded border flex-1"></ul>
           </div>
+
         </div>
       </div>
     </section>
@@ -286,7 +299,6 @@
         <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700 text-lg font-bold">✕</button>
       </div>
 
-      <!-- Profil Truk -->
       <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 grid grid-cols-2 gap-2 text-xs">
         <p><span class="text-slate-400">Divisi:</span> <strong id="mDivisi" class="text-slate-800">-</strong></p>
         <p><span class="text-slate-400">Aktivitas:</span> <strong id="mAktivitas" class="text-slate-800">-</strong></p>
@@ -296,7 +308,6 @@
         <p><span class="text-slate-400">Muatan:</span> <strong id="mMuatan" class="text-slate-800">-</strong></p>
       </div>
 
-      <!-- Timeline & Jam-Jam Presisi -->
       <div class="space-y-3 text-xs">
         <h4 class="font-bold text-slate-700 uppercase tracking-wide text-[11px]">Timeline Waktu Pelaksanaan</h4>
         <div class="border-l-2 border-blue-500 pl-4 space-y-3">
@@ -305,24 +316,23 @@
             <p id="mTimeArrived" class="text-slate-500 font-mono">-</p>
           </div>
           <div>
-            <p class="font-bold text-slate-800">2. Panggilan Masuk Area (Mulai Proses)</p>
+            <p class="font-bold text-slate-800">2. Panggilan Masuk Dock (Mulai Pengerjaan)</p>
             <p id="mTimeProcess" class="text-slate-500 font-mono">-</p>
           </div>
           <div>
-            <p class="font-bold text-slate-800">3. Penutupan Dokumen (Selesai)</p>
+            <p class="font-bold text-slate-800">3. Penutupan Surat Jalan (Selesai)</p>
             <p id="mTimeCompleted" class="text-slate-500 font-mono">-</p>
           </div>
         </div>
       </div>
 
-      <!-- Ringkasan SLA -->
       <div class="bg-blue-50 p-3 rounded-lg border border-blue-200 grid grid-cols-3 gap-2 text-center text-xs">
         <div>
           <p class="text-blue-600 font-medium text-[11px]">Durasi Antre</p>
           <p id="mDurAntre" class="font-bold text-blue-900 mt-0.5">-</p>
         </div>
         <div>
-          <p class="text-blue-600 font-medium text-[11px]">Durasi Proses</p>
+          <p class="text-blue-600 font-medium text-[11px]">Durasi Pengerjaan</p>
           <p id="mDurProses" class="font-bold text-blue-900 mt-0.5">-</p>
         </div>
         <div>
@@ -341,13 +351,22 @@
 
   <script>
     const SUPABASE_URL = "https://qayfxxiqcyuigvytysmc.supabase.co";
-    // Tempelkan kunci sb_publishable_... Anda
-    const SUPABASE_KEY = "sb_publishable_2O0mA4TLwdB95scC9Im6IQ_hHmaKNEJ";
+    // Tempelkan kunci publishable/anon key Anda
+    const SUPABASE_KEY = "TEMPELKAN_PUBLISHABLE_KEY_DI_SINI";
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    let activeDivision = null;
+    let allDivisions = [];
+    let allVendors = [];
+    let allMaterials = [];
     let cachedQueues = [];
 
-    // Format Durasi Detik ke Format Jam Menit Detik
+    function checkUrlParameter() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const divCode = urlParams.get('div');
+      return divCode ? divCode.toLowerCase().trim() : null;
+    }
+
     function formatDuration(diffMs) {
       if (diffMs < 0 || isNaN(diffMs)) return '-';
       const sec = Math.floor(diffMs / 1000);
@@ -359,7 +378,6 @@
       return `${s} detik`;
     }
 
-    // Format Tanggal Jam Bahasa Indonesia
     function formatDateTime(isoString) {
       if (!isoString) return '-';
       const d = new Date(isoString);
@@ -369,7 +387,6 @@
       }) + ' WIB';
     }
 
-    // Switch Antar Tab
     function switchTab(tab) {
       document.getElementById('viewBoard').classList.add('hidden');
       document.getElementById('viewRekap').classList.add('hidden');
@@ -393,44 +410,133 @@
       }
     }
 
-    // Muat Seluruh Master Data
     async function loadMasterData() {
       const [dRes, vRes, cRes, mRes] = await Promise.all([
-        db.from('master_divisions').select('*').order('name'),
+        db.from('master_divisions').select('*').order('id'),
         db.from('master_vendors').select('*').order('name'),
         db.from('master_vehicle_types').select('*').order('name'),
         db.from('master_materials').select('*').order('name')
       ]);
 
-      // Isi Dropdown Global & Form
-      if (dRes.data) {
-        const dOpts = dRes.data.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
-        document.getElementById('globalDivisionFilter').innerHTML = '<option value="ALL">Semua Divisi</option>' + dOpts;
-        document.getElementById('inputDivision').innerHTML = '<option value="">-- Pilih Divisi --</option>' + dOpts;
-        document.getElementById('filterDivisi').innerHTML = '<option value="">Semua Divisi</option>' + dOpts;
-        renderMasterList('masterDivisiUl', 'master_divisions', dRes.data);
+      allDivisions = dRes.data || [];
+      allVendors = vRes.data || [];
+      allMaterials = mRes.data || [];
+
+      const urlCode = checkUrlParameter();
+      if (urlCode) {
+        const found = allDivisions.find(d => d.code.toLowerCase() === urlCode);
+        if (found) {
+          activeDivision = found;
+          document.getElementById('divisionLockBadge').classList.remove('hidden');
+          document.getElementById('lockedDivisionName').innerText = found.name;
+          document.getElementById('appSubtitle').innerText = `Portal Mandiri: ${found.name}`;
+          document.getElementById('formDivisionIndicator').innerText = `Terkunci: ${found.name}`;
+        }
       }
 
-      if (vRes.data) {
-        document.getElementById('inputVendor').innerHTML = '<option value="">-- Pilih Vendor --</option>' + 
-          vRes.data.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
-        renderMasterList('masterVendorUl', 'master_vendors', vRes.data);
+      const dOpts = allDivisions.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
+      
+      const inputDivEl = document.getElementById('inputDivision');
+      if (activeDivision) {
+        inputDivEl.innerHTML = `<option value="${activeDivision.name}">${activeDivision.name}</option>`;
+        inputDivEl.disabled = true;
+      } else {
+        inputDivEl.innerHTML = '<option value="">-- Pilih Divisi --</option>' + dOpts;
+        inputDivEl.disabled = false;
       }
+
+      document.getElementById('filterDivisi').innerHTML = '<option value="">Semua Divisi</option>' + dOpts;
+      if (activeDivision) {
+        document.getElementById('filterDivisi').value = activeDivision.name;
+      }
+
+      document.getElementById('addVendorDivisi').innerHTML = dOpts;
+      document.getElementById('addMaterialDivisi').innerHTML = dOpts;
 
       if (cRes.data) {
         document.getElementById('inputVehicle').innerHTML = '<option value="">-- Pilih Armada --</option>' + 
           cRes.data.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-        renderMasterList('masterVehicleUl', 'master_vehicle_types', cRes.data);
+        renderMasterUl('masterVehicleUl', 'master_vehicle_types', cRes.data);
       }
 
-      if (mRes.data) {
-        document.getElementById('inputMaterial').innerHTML = '<option value="">-- Pilih Muatan --</option>' + 
-          mRes.data.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
-        renderMasterList('masterMaterialUl', 'master_materials', mRes.data);
-      }
+      renderDivisionList();
+      renderVendorList();
+      renderMaterialList();
+
+      onDivisionChange();
     }
 
-    function renderMasterList(ulId, table, list) {
+    function onDivisionChange() {
+      const selectedDiv = activeDivision ? activeDivision.name : document.getElementById('inputDivision').value;
+
+      const vendorEl = document.getElementById('inputVendor');
+      const materialEl = document.getElementById('inputMaterial');
+
+      if (!selectedDiv) {
+        vendorEl.innerHTML = '<option value="">Pilih divisi dulu...</option>';
+        materialEl.innerHTML = '<option value="">Pilih divisi dulu...</option>';
+        return;
+      }
+
+      const filteredVendors = allVendors.filter(v => v.division_name === selectedDiv);
+      vendorEl.innerHTML = '<option value="">-- Pilih Vendor --</option>' + 
+        filteredVendors.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+
+      const filteredMaterials = allMaterials.filter(m => m.division_name === selectedDiv);
+      materialEl.innerHTML = '<option value="">-- Pilih Muatan --</option>' + 
+        filteredMaterials.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+    }
+
+    function renderDivisionList() {
+      const ul = document.getElementById('masterDivisiUl');
+      const baseUrl = window.location.origin + window.location.pathname;
+
+      ul.innerHTML = allDivisions.map(d => {
+        const fullLink = `${baseUrl}?div=${d.code}`;
+        return `
+          <li class="py-1.5 flex flex-col gap-1">
+            <div class="flex justify-between items-center">
+              <strong class="text-slate-800 truncate pr-1">${d.name}</strong>
+              <button onclick="deleteMaster('master_divisions', ${d.id})" class="text-red-500 hover:text-red-700 text-[10px]">Hapus</button>
+            </div>
+            <div class="flex items-center gap-1">
+              <span class="text-[10px] font-mono text-slate-400 bg-slate-100 px-1 py-0.5 rounded truncate flex-1">?div=${d.code}</span>
+              <button onclick="copyToClipboard('${fullLink}')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded font-semibold border border-blue-200">
+                Salin Link 🔗
+              </button>
+            </div>
+          </li>
+        `;
+      }).join('') || '<li class="text-slate-400 italic">Belum ada divisi</li>';
+    }
+
+    function renderVendorList() {
+      const ul = document.getElementById('masterVendorUl');
+      ul.innerHTML = allVendors.map(v => `
+        <li class="flex justify-between items-center py-1">
+          <div>
+            <span class="font-medium text-slate-800">${v.name}</span>
+            <span class="block text-[10px] text-slate-400 truncate max-w-[150px]">${v.division_name}</span>
+          </div>
+          <button onclick="deleteMaster('master_vendors', ${v.id})" class="text-red-500 hover:text-red-700 text-[10px]">Hapus</button>
+        </li>
+      `).join('') || '<li class="text-slate-400 italic">Belum ada vendor</li>';
+    }
+
+    function renderMaterialList() {
+      const ul = document.getElementById('masterMaterialUl');
+      ul.innerHTML = allMaterials.map(m => `
+        <li class="flex justify-between items-center py-1">
+          <div>
+            <span class="font-medium text-slate-800">${m.name}</span>
+            <span class="block text-[10px] text-slate-400 truncate max-w-[150px]">${m.division_name}</span>
+          </div>
+          <button onclick="deleteMaster('master_materials', ${m.id})" class="text-red-500 hover:text-red-700 text-[10px]">Hapus</button>
+        </li>
+      `).join('') || '<li class="text-slate-400 italic">Belum ada muatan</li>';
+    }
+
+    function renderMasterUl(ulId, table, list) {
       document.getElementById(ulId).innerHTML = list.map(item => `
         <li class="flex justify-between items-center py-1">
           <span class="truncate pr-2">${item.name}</span>
@@ -439,7 +545,56 @@
       `).join('') || '<li class="text-slate-400 italic">Belum ada data</li>';
     }
 
-    async function addMaster(table, inputId) {
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Tautan divisi berhasil disalin ke clipboard!\n\n" + text);
+      }).catch(err => {
+        prompt("Salin tautan berikut secara manual:", text);
+      });
+    }
+
+    async function addDivision() {
+      const name = document.getElementById('addDivisiName').value.trim();
+      let code = document.getElementById('addDivisiCode').value.trim().toLowerCase().replace(/\s+/g, '-');
+      if (!name) return;
+      if (!code) code = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+
+      const { error } = await db.from('master_divisions').insert([{ name, code }]);
+      if (error) alert(error.message);
+      else {
+        document.getElementById('addDivisiName').value = '';
+        document.getElementById('addDivisiCode').value = '';
+        loadMasterData();
+      }
+    }
+
+    async function addVendor() {
+      const divName = document.getElementById('addVendorDivisi').value;
+      const name = document.getElementById('addVendorName').value.trim();
+      if (!name || !divName) return;
+
+      const { error } = await db.from('master_vendors').insert([{ name, division_name: divName }]);
+      if (error) alert(error.message);
+      else {
+        document.getElementById('addVendorName').value = '';
+        loadMasterData();
+      }
+    }
+
+    async function addMaterial() {
+      const divName = document.getElementById('addMaterialDivisi').value;
+      const name = document.getElementById('addMaterialName').value.trim();
+      if (!name || !divName) return;
+
+      const { error } = await db.from('master_materials').insert([{ name, division_name: divName }]);
+      if (error) alert(error.message);
+      else {
+        document.getElementById('addMaterialName').value = '';
+        loadMasterData();
+      }
+    }
+
+    async function addMasterGeneric(table, inputId) {
       const el = document.getElementById(inputId);
       const val = el.value.trim();
       if (!val) return;
@@ -449,13 +604,12 @@
     }
 
     async function deleteMaster(table, id) {
-      if (!confirm('Hapus data master ini?')) return;
+      if (!confirm('Hapus item master ini?')) return;
       const { error } = await db.from(table).delete().eq('id', id);
       if (error) alert(error.message);
       else loadMasterData();
     }
 
-    // Tarik & Filter Data Board Utama
     async function fetchQueues() {
       const { data, error } = await db
         .from('vendor_queues')
@@ -463,16 +617,11 @@
         .order('id', { ascending: true });
 
       if (error) { console.error(error); return; }
-      cachedQueues = data;
-      renderBoard();
-    }
-
-    function filterBoardByDivision() {
+      cachedQueues = data || [];
       renderBoard();
     }
 
     function renderBoard() {
-      const selectedDiv = document.getElementById('globalDivisionFilter').value;
       const todayDateStr = new Date().toISOString().slice(0, 10);
 
       const colMenunggu = document.getElementById('colMenunggu');
@@ -486,15 +635,11 @@
       let c1 = 0, c2 = 0, c3 = 0;
 
       cachedQueues.forEach(item => {
-        // Filter Divisi
-        if (selectedDiv !== 'ALL' && item.division !== selectedDiv) return;
+        if (activeDivision && item.division !== activeDivision.name) return;
 
-        // Logika Harian:
-        // Status Menunggu & Proses -> Selalu ditampilkan meski dari kemarin
-        // Status Selesai -> Hanya ditampilkan jika selesai HARI INI
         if (item.status === 'Selesai') {
           const compDate = item.completed_at ? item.completed_at.slice(0, 10) : '';
-          if (compDate !== todayDateStr) return; // Sembunyikan riwayat kemarin dari board utama
+          if (compDate !== todayDateStr) return;
         }
 
         if (item.status === 'Menunggu') {
@@ -518,7 +663,6 @@
       if (c3 === 0) colSelesai.innerHTML = '<p class="text-xs text-slate-400 italic text-center py-6">Belum ada yang tuntas hari ini</p>';
     }
 
-    // Card Truk di Board
     function createBoardCard(item) {
       const actColor = item.activity_type === 'Bongkar' ? 'bg-amber-100 text-amber-800' : 'bg-purple-100 text-purple-800';
       
@@ -549,7 +693,7 @@
           </div>
 
           <div class="flex items-center gap-1.5 mb-2">
-            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${actColor}">${item.activity_type}</span>
+            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${actColor}">[${item.activity_type}]</span>
             <span class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded truncate max-w-[150px]">${item.division}</span>
           </div>
 
@@ -558,7 +702,6 @@
             <p><span class="text-slate-400">Armada:</span> ${item.vehicle_type} (${item.material})</p>
           </div>
 
-          <!-- Indikator Waktu SLA Bertingkat -->
           <div class="bg-slate-50 p-2 rounded border border-slate-100 space-y-1 font-mono text-[11px]">
             <div class="flex justify-between">
               <span class="text-slate-400">Waktu Antre:</span>
@@ -577,7 +720,6 @@
       `;
     }
 
-    // Timer SLA Realtime
     setInterval(() => {
       const now = new Date().getTime();
 
@@ -589,29 +731,24 @@
         const tProcess = item.process_started_at ? new Date(item.process_started_at).getTime() : null;
         const tCompleted = item.completed_at ? new Date(item.completed_at).getTime() : null;
 
-        // 1. Waktu Antre
         if (elAntre) {
           if (item.status === 'Menunggu') {
             elAntre.innerText = formatDuration(now - tArrived) + " (Live)";
           } else {
-            // Membeku saat status sudah Proses atau Selesai
             elAntre.innerText = formatDuration(tProcess - tArrived);
           }
         }
 
-        // 2. Waktu Pengerjaan (Bongkar/Muat)
         if (elProses) {
           if (item.status === 'Proses') {
             elProses.innerText = formatDuration(now - tProcess) + " (Live)";
           } else if (item.status === 'Selesai') {
-            // Membeku saat selesai
             elProses.innerText = formatDuration(tCompleted - tProcess);
           }
         }
       });
     }, 1000);
 
-    // Submit Registrasi Truk
     document.getElementById('queueForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('btnSubmitQueue');
@@ -619,14 +756,17 @@
       btn.innerText = 'Menyimpan...';
 
       const now = new Date();
-      const prefix = document.getElementById('inputActivity').value === 'Bongkar' ? 'BKG' : 'MUT';
+      const act = document.getElementById('inputActivity').value;
+      const prefix = act === 'Bongkar' ? 'BKG' : 'MUT';
       const timeCode = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0') + String(now.getSeconds()).padStart(2, '0');
       const queueCode = `${prefix}-${timeCode}`;
 
+      const selectedDiv = activeDivision ? activeDivision.name : document.getElementById('inputDivision').value;
+
       const payload = {
         queue_code: queueCode,
-        division: document.getElementById('inputDivision').value,
-        activity_type: document.getElementById('inputActivity').value,
+        division: selectedDiv,
+        activity_type: act,
         vendor_name: document.getElementById('inputVendor').value,
         vehicle_type: document.getElementById('inputVehicle').value,
         plate_number: document.getElementById('inputPlate').value.trim().toUpperCase(),
@@ -644,10 +784,9 @@
       }
 
       btn.disabled = false;
-      btn.innerText = '+ Generate ID & Antrekan Kendaraan';
+      btn.innerText = '+ Generate Tiket & Antrekan';
     });
 
-    // Update Status Truk & Catat Waktu Presisi
     async function updateQueueStatus(id, newStatus) {
       const nowIso = new Date().toISOString();
       const payload = { status: newStatus };
@@ -663,7 +802,6 @@
       else fetchQueues();
     }
 
-    // Terapkan Filter di Halaman Rekap & Periode
     async function applyReportFilter() {
       const sDate = document.getElementById('filterStartDate').value;
       const eDate = document.getElementById('filterEndDate').value;
@@ -725,7 +863,6 @@
       }).join('');
     }
 
-    // Modal Audit Detail
     async function openDetailModal(id) {
       let item = cachedQueues.find(q => q.id === id);
       if (!item) {
@@ -761,13 +898,11 @@
       document.getElementById('modalDetail').classList.add('hidden');
     }
 
-    // Inisialisasi Tanggal Filter Rekap (Default: Awal Bulan s/d Hari Ini)
     const today = new Date();
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
     document.getElementById('filterStartDate').value = firstDay;
     document.getElementById('filterEndDate').value = today.toISOString().slice(0, 10);
 
-    // Jalankan awal
     loadMasterData();
     fetchQueues();
   </script>
