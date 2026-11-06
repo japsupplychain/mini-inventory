@@ -236,7 +236,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
           
           <!-- Master Divisi + Fitur Copy Link Otomatis -->
-          <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 flex flex-col">
+          <div id="colMasterDivisiWrapper" class="p-3 bg-slate-50 rounded-lg border border-slate-200 flex flex-col">
             <h3 class="font-bold mb-1 text-slate-800">1. Master Divisi</h3>
             <p class="text-[10px] text-slate-400 mb-2">Tautan URL otomatis tercipta</p>
             <div class="space-y-1.5 mb-2">
@@ -410,23 +410,23 @@
       }
     }
 
-// 2. Muat Master Data & Terapkan Isolasi Ketat
+    // 2. Muat Master Data & Isolasi
     async function loadMasterData() {
       const [dRes, vRes, cRes, mRes] = await Promise.all([
         db.from('master_divisions').select('*').order('id'),
-        db.from('master_vendors').select('*').order('name'),
+        db.from('master_vendors').select('*').order('id', { ascending: false }),
         db.from('master_vehicle_types').select('*').order('name'),
-        db.from('master_materials').select('*').order('name')
+        db.from('master_materials').select('*').order('id', { ascending: false })
       ]);
 
       allDivisions = dRes.data || [];
       allVendors = vRes.data || [];
       allMaterials = mRes.data || [];
 
-      // Periksa parameter ?div=...
+      // Periksa Parameter URL
       const urlCode = checkUrlParameter();
       if (urlCode) {
-        const found = allDivisions.find(d => d.code.toLowerCase() === urlCode);
+        const found = allDivisions.find(d => d.code && d.code.toLowerCase() === urlCode);
         if (found) {
           activeDivision = found;
           document.getElementById('divisionLockBadge').classList.remove('hidden');
@@ -438,7 +438,7 @@
 
       const dOpts = allDivisions.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
       
-      // Form Registrasi Antrean
+      // Form Registrasi
       const inputDivEl = document.getElementById('inputDivision');
       if (activeDivision) {
         inputDivEl.innerHTML = `<option value="${activeDivision.name}">${activeDivision.name}</option>`;
@@ -448,59 +448,121 @@
         inputDivEl.disabled = false;
       }
 
-      // Filter di Halaman Rekap
+      // Filter di Rekap
       document.getElementById('filterDivisi').innerHTML = '<option value="">Semua Divisi</option>' + dOpts;
       if (activeDivision) {
         document.getElementById('filterDivisi').value = activeDivision.name;
       }
 
-      // === KONTROL ISOLASI HALAMAN KELOLA MASTER ===
+      // Halaman Master
       const addVendorDiv = document.getElementById('addVendorDivisi');
       const addMatDiv = document.getElementById('addMaterialDivisi');
-      const colMasterDivisi = document.getElementById('masterDivisiUl').closest('div');
+      const colDivWrapper = document.getElementById('colMasterDivisiWrapper');
 
       if (activeDivision) {
-        // Kunci dropdown master vendor & muatan ke divisi aktif
         addVendorDiv.innerHTML = `<option value="${activeDivision.name}">${activeDivision.name}</option>`;
         addVendorDiv.disabled = true;
 
         addMatDiv.innerHTML = `<option value="${activeDivision.name}">${activeDivision.name}</option>`;
         addMatDiv.disabled = true;
 
-        // Sembunyikan panel Master Divisi agar operator cabang tidak mengubah struktur divisi
-        if (colMasterDivisi) colMasterDivisi.classList.add('hidden');
+        if (colDivWrapper) colDivWrapper.classList.add('hidden');
       } else {
-        // Mode Pusat / Admin Bebas
         addVendorDiv.innerHTML = dOpts;
         addVendorDiv.disabled = false;
 
         addMatDiv.innerHTML = dOpts;
         addMatDiv.disabled = false;
 
-        if (colMasterDivisi) colMasterDivisi.classList.remove('hidden');
+        if (colDivWrapper) colDivWrapper.classList.remove('hidden');
       }
 
-      // Master Armada Kendaraan (Global)
+      // Master Armada Global
       if (cRes.data) {
         document.getElementById('inputVehicle').innerHTML = '<option value="">-- Pilih Armada --</option>' + 
           cRes.data.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
         renderMasterUl('masterVehicleUl', 'master_vehicle_types', cRes.data);
       }
 
-      // Render daftar data master
       renderDivisionList();
       renderVendorList();
       renderMaterialList();
 
-      onDivisionChange();
+      // Trigger pembaruan dropdown input kedatangan
+      const currentDiv = activeDivision ? activeDivision.name : inputDivEl.value;
+      updateVendorAndMaterialDropdowns(currentDiv);
     }
 
-    // Filter daftar Vendor di halaman Master Data
+    // Fungsi Pengisi Dropdown Form Registrasi Kedatangan
+    function updateVendorAndMaterialDropdowns(divisionName) {
+      const vendorEl = document.getElementById('inputVendor');
+      const materialEl = document.getElementById('inputMaterial');
+
+      if (!divisionName) {
+        vendorEl.innerHTML = '<option value="">Pilih divisi dulu...</option>';
+        materialEl.innerHTML = '<option value="">Pilih divisi dulu...</option>';
+        return;
+      }
+
+      const targetDiv = divisionName.trim().toLowerCase();
+
+      // Filter Vendor
+      const filteredVendors = allVendors.filter(v => 
+        v.division_name && v.division_name.trim().toLowerCase() === targetDiv
+      );
+      if (filteredVendors.length > 0) {
+        vendorEl.innerHTML = '<option value="">-- Pilih Vendor --</option>' + 
+          filteredVendors.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+      } else {
+        vendorEl.innerHTML = '<option value="">-- Belum ada vendor untuk divisi ini --</option>';
+      }
+
+      // Filter Muatan
+      const filteredMaterials = allMaterials.filter(m => 
+        m.division_name && m.division_name.trim().toLowerCase() === targetDiv
+      );
+      if (filteredMaterials.length > 0) {
+        materialEl.innerHTML = '<option value="">-- Pilih Muatan --</option>' + 
+          filteredMaterials.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+      } else {
+        materialEl.innerHTML = '<option value="">-- Belum ada muatan untuk divisi ini --</option>';
+      }
+    }
+
+    function onDivisionChange() {
+      const selectedDiv = activeDivision ? activeDivision.name : document.getElementById('inputDivision').value;
+      updateVendorAndMaterialDropdowns(selectedDiv);
+    }
+
+    function renderDivisionList() {
+      const ul = document.getElementById('masterDivisiUl');
+      const baseUrl = window.location.origin + window.location.pathname;
+
+      ul.innerHTML = allDivisions.map(d => {
+        const fullLink = `${baseUrl}?div=${d.code}`;
+        return `
+          <li class="py-1.5 flex flex-col gap-1">
+            <div class="flex justify-between items-center">
+              <strong class="text-slate-800 truncate pr-1">${d.name}</strong>
+              <button onclick="deleteMaster('master_divisions', ${d.id})" class="text-red-500 hover:text-red-700 text-[10px]">Hapus</button>
+            </div>
+            <div class="flex items-center gap-1">
+              <span class="text-[10px] font-mono text-slate-400 bg-slate-100 px-1 py-0.5 rounded truncate flex-1">?div=${d.code}</span>
+              <button onclick="copyToClipboard('${fullLink}')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded font-semibold border border-blue-200">
+                Salin Link 🔗
+              </button>
+            </div>
+          </li>
+        `;
+      }).join('') || '<li class="text-slate-400 italic">Belum ada divisi</li>';
+    }
+
     function renderVendorList() {
       const ul = document.getElementById('masterVendorUl');
-      // Jika terkunci divisi, filter hanya vendor milik divisi tersebut
-      const list = activeDivision 
-        ? allVendors.filter(v => v.division_name === activeDivision.name)
+      const targetDiv = activeDivision ? activeDivision.name.trim().toLowerCase() : null;
+
+      const list = targetDiv 
+        ? allVendors.filter(v => v.division_name && v.division_name.trim().toLowerCase() === targetDiv)
         : allVendors;
 
       ul.innerHTML = list.map(v => `
@@ -511,15 +573,15 @@
           </div>
           <button onclick="deleteMaster('master_vendors', ${v.id})" class="text-red-500 hover:text-red-700 text-[10px]">Hapus</button>
         </li>
-      `).join('') || '<li class="text-slate-400 italic">Belum ada vendor</li>';
+      `).join('') || '<li class="text-slate-400 italic">Belum ada vendor terdaftar</li>';
     }
 
-    // Filter daftar Muatan di halaman Master Data
     function renderMaterialList() {
       const ul = document.getElementById('masterMaterialUl');
-      // Jika terkunci divisi, filter hanya muatan milik divisi tersebut
-      const list = activeDivision 
-        ? allMaterials.filter(m => m.division_name === activeDivision.name)
+      const targetDiv = activeDivision ? activeDivision.name.trim().toLowerCase() : null;
+
+      const list = targetDiv 
+        ? allMaterials.filter(m => m.division_name && m.division_name.trim().toLowerCase() === targetDiv)
         : allMaterials;
 
       ul.innerHTML = list.map(m => `
@@ -530,7 +592,7 @@
           </div>
           <button onclick="deleteMaster('master_materials', ${m.id})" class="text-red-500 hover:text-red-700 text-[10px]">Hapus</button>
         </li>
-      `).join('') || '<li class="text-slate-400 italic">Belum ada muatan</li>';
+      `).join('') || '<li class="text-slate-400 italic">Belum ada muatan terdaftar</li>';
     }
 
     function renderMasterUl(ulId, table, list) {
@@ -550,6 +612,7 @@
       });
     }
 
+    // CRUD Master dengan Penanganan State Terkunci
     async function addDivision() {
       const name = document.getElementById('addDivisiName').value.trim();
       let code = document.getElementById('addDivisiCode').value.trim().toLowerCase().replace(/\s+/g, '-');
@@ -561,33 +624,42 @@
       else {
         document.getElementById('addDivisiName').value = '';
         document.getElementById('addDivisiCode').value = '';
-        loadMasterData();
+        await loadMasterData();
       }
     }
 
     async function addVendor() {
-      const divName = document.getElementById('addVendorDivisi').value;
+      // Ambil divisi dari activeDivision jika terkunci, atau dari select jika terbuka
+      const divName = activeDivision ? activeDivision.name : document.getElementById('addVendorDivisi').value;
       const name = document.getElementById('addVendorName').value.trim();
-      if (!name || !divName) return;
+      if (!name || !divName) {
+        alert("Nama vendor dan divisi wajib terisi!");
+        return;
+      }
 
       const { error } = await db.from('master_vendors').insert([{ name, division_name: divName }]);
-      if (error) alert(error.message);
-      else {
+      if (error) {
+        alert(error.message);
+      } else {
         document.getElementById('addVendorName').value = '';
-        loadMasterData();
+        await loadMasterData();
       }
     }
 
     async function addMaterial() {
-      const divName = document.getElementById('addMaterialDivisi').value;
+      const divName = activeDivision ? activeDivision.name : document.getElementById('addMaterialDivisi').value;
       const name = document.getElementById('addMaterialName').value.trim();
-      if (!name || !divName) return;
+      if (!name || !divName) {
+        alert("Nama muatan dan divisi wajib terisi!");
+        return;
+      }
 
       const { error } = await db.from('master_materials').insert([{ name, division_name: divName }]);
-      if (error) alert(error.message);
-      else {
+      if (error) {
+        alert(error.message);
+      } else {
         document.getElementById('addMaterialName').value = '';
-        loadMasterData();
+        await loadMasterData();
       }
     }
 
@@ -597,16 +669,17 @@
       if (!val) return;
       const { error } = await db.from(table).insert([{ name: val }]);
       if (error) alert(error.message);
-      else { el.value = ''; loadMasterData(); }
+      else { el.value = ''; await loadMasterData(); }
     }
 
     async function deleteMaster(table, id) {
       if (!confirm('Hapus item master ini?')) return;
       const { error } = await db.from(table).delete().eq('id', id);
       if (error) alert(error.message);
-      else loadMasterData();
+      else await loadMasterData();
     }
 
+    // 3. Tarik Antrean & Render Board Sesuai Divisi Aktif
     async function fetchQueues() {
       const { data, error } = await db
         .from('vendor_queues')
@@ -632,7 +705,7 @@
       let c1 = 0, c2 = 0, c3 = 0;
 
       cachedQueues.forEach(item => {
-        if (activeDivision && item.division !== activeDivision.name) return;
+        if (activeDivision && item.division.trim().toLowerCase() !== activeDivision.name.trim().toLowerCase()) return;
 
         if (item.status === 'Selesai') {
           const compDate = item.completed_at ? item.completed_at.slice(0, 10) : '';
@@ -746,6 +819,7 @@
       });
     }, 1000);
 
+    // Registrasi Truk
     document.getElementById('queueForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('btnSubmitQueue');
