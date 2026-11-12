@@ -860,6 +860,10 @@
     });
 
     async function updateQueueStatus(id, newStatus) {
+      // Munculkan pop-up konfirmasi sebelum mengubah status waktu
+      const isConfirmed = confirm("apakah anda yakin mau melakukan adegan berbahaya ini?");
+      if (!isConfirmed) return; // Batalkan jika operator menekan Cancel/Batal
+
       const nowIso = new Date().toISOString();
       const payload = { status: newStatus };
 
@@ -873,7 +877,6 @@
       if (error) alert(error.message);
       else fetchQueues();
     }
-
     async function applyReportFilter() {
       const sDate = document.getElementById('filterStartDate').value;
       const eDate = document.getElementById('filterEndDate').value;
