@@ -616,25 +616,34 @@
     }
 
     function switchTab(tab) {
+      // 1. Blokir paksa jika user mencoba membuka tab yang tidak diizinkan rolenya
+      if (tab === 'rekap' && !activeRoleRules.can_view_rekap) return;
+      if (tab === 'master' && !activeRoleRules.can_manage_master) return;
+
       document.getElementById('viewBoard').classList.add('hidden');
       document.getElementById('viewRekap').classList.add('hidden');
       document.getElementById('viewMaster').classList.add('hidden');
 
-      document.getElementById('tabBtnBoard').className = "px-3 py-1 font-medium text-slate-300 hover:text-white rounded transition";
-      document.getElementById('tabBtnRekap').className = "px-3 py-1 font-medium text-slate-300 hover:text-white rounded transition";
-      document.getElementById('tabBtnMaster').className = "px-3 py-1 font-medium text-slate-300 hover:text-white rounded transition";
+      const btnBoard = document.getElementById('tabBtnBoard');
+      const btnRekap = document.getElementById('tabBtnRekap');
+      const btnMaster = document.getElementById('tabBtnMaster');
+
+      // Reset warna tombol tanpa menghapus class 'hidden' jika memang disembunyikan
+      btnBoard.className = "px-3 py-1 font-medium text-slate-300 hover:text-white rounded transition";
+      btnRekap.className = `px-3 py-1 font-medium text-slate-300 hover:text-white rounded transition ${!activeRoleRules.can_view_rekap ? 'hidden' : ''}`;
+      btnMaster.className = `px-3 py-1 font-medium text-slate-300 hover:text-white rounded transition ${!activeRoleRules.can_manage_master ? 'hidden' : ''}`;
 
       if (tab === 'board') {
         document.getElementById('viewBoard').classList.remove('hidden');
-        document.getElementById('tabBtnBoard').className = "px-3 py-1 font-bold rounded bg-blue-600 text-white transition";
+        btnBoard.className = "px-3 py-1 font-bold rounded bg-blue-600 text-white transition";
         fetchQueues();
       } else if (tab === 'rekap') {
         document.getElementById('viewRekap').classList.remove('hidden');
-        document.getElementById('tabBtnRekap').className = "px-3 py-1 font-bold rounded bg-blue-600 text-white transition";
+        btnRekap.className = "px-3 py-1 font-bold rounded bg-blue-600 text-white transition";
         applyReportFilter();
-      } else {
+      } else if (tab === 'master') {
         document.getElementById('viewMaster').classList.remove('hidden');
-        document.getElementById('tabBtnMaster').className = "px-3 py-1 font-bold rounded bg-blue-600 text-white transition";
+        btnMaster.className = "px-3 py-1 font-bold rounded bg-blue-600 text-white transition";
       }
     }
 
