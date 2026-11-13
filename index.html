@@ -23,7 +23,7 @@
       <form id="loginForm" class="space-y-4 text-xs">
         <div>
           <label class="block font-semibold text-slate-700 mb-1">User ID</label>
-          <input type="text" id="loginUserId" placeholder="Contoh: chk01 / adm01 / spv01" required autocomplete="off"
+          <input type="text" id="loginUserId" placeholder="Contoh: super01 / spv01 / adm01 / chk01" required autocomplete="off"
             class="w-full border border-slate-300 p-2.5 rounded-lg outline-none focus:border-blue-600 font-mono">
         </div>
         <div>
@@ -55,7 +55,7 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-          <!-- Badge Mode Terkunci Divisi -->
+          <!-- Badge Mode Terkunci Divisi (Tanpa Jalan Keluar) -->
           <div id="divisionLockBadge" class="hidden items-center gap-1.5 bg-blue-900/90 border border-blue-500 px-2.5 py-1 rounded-lg text-xs font-semibold text-blue-200">
             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             <span id="lockedDivisionName" class="text-white font-bold"></span>
@@ -95,7 +95,7 @@
       <!-- ================= HALAMAN 1: BOARD ANTREAN ================= -->
       <section id="viewBoard" class="space-y-6">
         
-        <!-- Form Input Truk Masuk (Otomatis Disembunyikan untuk Role Checker) -->
+        <!-- Form Input Truk Masuk (Dikontrol via can_input_gate di master_roles) -->
         <div id="gateRegistrationCard" class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
           <div class="flex justify-between items-center mb-3">
             <h2 class="text-xs font-bold uppercase text-slate-500 tracking-wider">
@@ -262,11 +262,11 @@
         </div>
       </section>
 
-      <!-- ================= HALAMAN 3: KELOLA MASTER DATA (KHUSUS SUPERVISOR) ================= -->
+      <!-- ================= HALAMAN 3: KELOLA MASTER DATA (Dikontrol via can_manage_master) ================= -->
       <section id="viewMaster" class="hidden space-y-6">
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
           <h2 class="text-sm font-bold text-slate-800 mb-1">Manajemen Master Data Operasional</h2>
-          <p class="text-xs text-slate-500 mb-5">Dikelola khusus oleh Supervisor. Akun User ID & Password petugas dikelola terpusat oleh Administrator sistem.</p>
+          <p class="text-xs text-slate-500 mb-5">Vendor dan Muatan terikat khusus ke divisi masing-masing. Hak akses User ID & Role diatur terpusat oleh Administrator.</p>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
             <!-- Master Divisi -->
@@ -420,8 +420,16 @@
     const SUPABASE_KEY = "sb_publishable_2O0mA4TLwdB95scC9Im6IQ_hHmaKNEJ";
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    let currentUser = null; // Menyimpan sesi login petugas
-    let activeDivision = null;
+    let currentUser = null;
+    let allowedDivisions = []; // Daftar divisi yang boleh diakses user (jika bukan ALL)
+    let activeDivision = null; // Terisi jika web terkunci ke 1 divisi spesifik
+    let activeRoleRules = {
+      can_input_gate: false,
+      can_operate_dock: true,
+      can_view_rekap: false,
+      can_manage_master: false
+    };
+
     let allDivisions = [];
     let allVendors = [];
     let allMaterials = [];
@@ -431,6 +439,17 @@
       const urlParams = new URLSearchParams(window.location.search);
       const divCode = urlParams.get('div');
       return divCode ? divCode.toLowerCase().trim() : null;
+    }
+
+    // Helper: Cek apakah user memiliki izin mengakses divisi tertentu
+    function isUserAllowedForDivision(userDivString, targetDivName) {
+      if (!userDivString) return false;
+      const cleanStr = userDivString.trim();
+      if (cleanStr.toUpperCase() === 'ALL') return true;
+
+      // Mendukung format multi-divisi dipisah koma (misal: "Divisi A, Divisi B")
+      const permittedList = cleanStr.split(',').map(s => s.trim().toLowerCase());
+      return permittedList.includes(targetDivName.trim().toLowerCase());
     }
 
     function formatDuration(diffMs) {
@@ -480,14 +499,13 @@
         return;
       }
 
-      // Cek apakah link dibuka lewat URL khusus divisi
+      // Cek validasi akses jika web dibuka melalui tautan cabang (?div=...)
       const urlCode = checkUrlParameter();
       if (urlCode) {
         const { data: divData } = await db.from('master_divisions').select('*').eq('code', urlCode).maybeSingle();
         if (divData) {
-          // Validasi apakah akun user punya izin ke divisi ini
-          if (user.division_name !== 'ALL' && user.division_name.trim().toLowerCase() !== divData.name.trim().toLowerCase()) {
-            errEl.innerText = `Akses Ditolak: Akun Anda terdaftar untuk (${user.division_name}), bukan untuk portal ini.`;
+          if (!isUserAllowedForDivision(user.division_name, divData.name)) {
+            errEl.innerText = `Akses Ditolak: Akun Anda (${user.division_name}) tidak memiliki wewenang pada portal ${divData.name}.`;
             errEl.classList.remove('hidden');
             btn.disabled = false;
             btn.innerText = 'Masuk ke Sistem →';
@@ -496,7 +514,6 @@
         }
       }
 
-      // Login Sukses -> Simpan sesi ke sessionStorage
       sessionStorage.setItem('dock_user_session', JSON.stringify(user));
       currentUser = user;
       initAuthenticatedApp();
@@ -508,33 +525,35 @@
       location.reload();
     }
 
-    // Terapkan 3 Layer Hak Akses
-    function applyRolePermissions() {
-      const role = currentUser.role; // 'Admin', 'Checker', atau 'Supervisor'
+    // Terapkan Hak Akses Dinamis dari Tabel master_roles Supabase
+    async function applyRolePermissions() {
+      const role = currentUser.role;
 
       document.getElementById('headerUserName').innerText = currentUser.full_name;
       document.getElementById('headerUserRole').innerText = role;
+
+      const { data: perm } = await db
+        .from('master_roles')
+        .select('*')
+        .ilike('role_name', role.trim())
+        .maybeSingle();
+
+      if (perm) {
+        activeRoleRules = perm;
+      }
 
       const gateFormCard = document.getElementById('gateRegistrationCard');
       const tabRekap = document.getElementById('tabBtnRekap');
       const tabMaster = document.getElementById('tabBtnMaster');
 
-      if (role === 'Checker') {
-        // Checker hanya bisa akses board bongkar/muat
-        gateFormCard.classList.add('hidden');
-        tabRekap.classList.add('hidden');
-        tabMaster.classList.add('hidden');
-      } else if (role === 'Admin') {
-        // Admin bisa akses antrean, bongkar, dan rekap. Master disembunyikan.
-        gateFormCard.classList.remove('hidden');
-        tabRekap.classList.remove('hidden');
-        tabMaster.classList.add('hidden');
-      } else if (role === 'Supervisor') {
-        // Supervisor akses penuh
-        gateFormCard.classList.remove('hidden');
-        tabRekap.classList.remove('hidden');
-        tabMaster.classList.remove('hidden');
-      }
+      if (activeRoleRules.can_input_gate) gateFormCard.classList.remove('hidden');
+      else gateFormCard.classList.add('hidden');
+
+      if (activeRoleRules.can_view_rekap) tabRekap.classList.remove('hidden');
+      else tabRekap.classList.add('hidden');
+
+      if (activeRoleRules.can_manage_master) tabMaster.classList.remove('hidden');
+      else tabMaster.classList.add('hidden');
     }
 
     // Modal Ubah PIN Mandiri
@@ -591,7 +610,7 @@
       document.getElementById('loginScreen').classList.add('hidden');
       document.getElementById('mainApp').classList.remove('hidden');
 
-      applyRolePermissions();
+      await applyRolePermissions();
       await loadMasterData();
       await fetchQueues();
     }
@@ -632,13 +651,21 @@
       allMaterials = mRes.data || [];
 
       const urlCode = checkUrlParameter();
+      const userDivSetting = currentUser.division_name.trim();
+
+      // Tentukan daftar divisi yang boleh diakses akun ini
+      if (userDivSetting.toUpperCase() === 'ALL') {
+        allowedDivisions = [...allDivisions];
+      } else {
+        allowedDivisions = allDivisions.filter(d => isUserAllowedForDivision(userDivSetting, d.name));
+      }
+
+      // Cek apakah akses dikunci ke 1 divisi (baik via URL ?div=... atau karena user hanya punya 1 divisi)
       if (urlCode) {
-        const found = allDivisions.find(d => d.code && d.code.toLowerCase() === urlCode);
+        const found = allowedDivisions.find(d => d.code && d.code.toLowerCase() === urlCode);
         if (found) activeDivision = found;
-      } else if (currentUser && currentUser.division_name !== 'ALL') {
-        // Jika user login dari URL utama tapi akunnya dikunci ke 1 divisi
-        const found = allDivisions.find(d => d.name.trim().toLowerCase() === currentUser.division_name.trim().toLowerCase());
-        if (found) activeDivision = found;
+      } else if (allowedDivisions.length === 1 && userDivSetting.toUpperCase() !== 'ALL') {
+        activeDivision = allowedDivisions[0];
       }
 
       if (activeDivision) {
@@ -646,10 +673,13 @@
         document.getElementById('lockedDivisionName').innerText = activeDivision.name;
         document.getElementById('appSubtitle').innerText = `Portal Mandiri: ${activeDivision.name}`;
         document.getElementById('formDivisionIndicator').innerText = `Terkunci: ${activeDivision.name}`;
+      } else if (userDivSetting.toUpperCase() !== 'ALL') {
+        document.getElementById('formDivisionIndicator').innerText = `Akses Terbatas (${allowedDivisions.length} Divisi)`;
       }
 
-      const dOpts = allDivisions.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
+      const dOpts = allowedDivisions.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
       
+      // Form Registrasi Kedatangan
       const inputDivEl = document.getElementById('inputDivision');
       if (activeDivision) {
         inputDivEl.innerHTML = `<option value="${activeDivision.name}">${activeDivision.name}</option>`;
@@ -659,12 +689,17 @@
         inputDivEl.disabled = false;
       }
 
-      document.getElementById('filterDivisi').innerHTML = '<option value="">Semua Divisi</option>' + dOpts;
+      // Filter Rekap
+      const filterDivEl = document.getElementById('filterDivisi');
       if (activeDivision) {
-        document.getElementById('filterDivisi').value = activeDivision.name;
-        document.getElementById('filterDivisi').disabled = true;
+        filterDivEl.innerHTML = `<option value="${activeDivision.name}">${activeDivision.name}</option>`;
+        filterDivEl.disabled = true;
+      } else {
+        filterDivEl.innerHTML = '<option value="">Semua Divisi Diizinkan</option>' + dOpts;
+        filterDivEl.disabled = false;
       }
 
+      // Halaman Kelola Master
       const addVendorDiv = document.getElementById('addVendorDivisi');
       const addMatDiv = document.getElementById('addMaterialDivisi');
       const colDivWrapper = document.getElementById('colMasterDivisiWrapper');
@@ -680,7 +715,11 @@
         addVendorDiv.disabled = false;
         addMatDiv.innerHTML = dOpts;
         addMatDiv.disabled = false;
-        if (colDivWrapper) colDivWrapper.classList.remove('hidden');
+        // Hanya Superuser/Admin ALL yang boleh kelola daftar Master Divisi
+        if (colDivWrapper) {
+          if (userDivSetting.toUpperCase() === 'ALL') colDivWrapper.classList.remove('hidden');
+          else colDivWrapper.classList.add('hidden');
+        }
       }
 
       if (cRes.data) {
@@ -749,8 +788,14 @@
 
     function renderVendorList() {
       const ul = document.getElementById('masterVendorUl');
-      const targetDiv = activeDivision ? activeDivision.name.trim().toLowerCase() : null;
-      const list = targetDiv ? allVendors.filter(v => v.division_name && v.division_name.trim().toLowerCase() === targetDiv) : allVendors;
+      let list = allVendors;
+      if (activeDivision) {
+        const target = activeDivision.name.trim().toLowerCase();
+        list = allVendors.filter(v => v.division_name && v.division_name.trim().toLowerCase() === target);
+      } else if (currentUser.division_name.toUpperCase() !== 'ALL') {
+        list = allVendors.filter(v => isUserAllowedForDivision(currentUser.division_name, v.division_name));
+      }
+
       ul.innerHTML = list.map(v => `
         <li class="flex justify-between items-center py-1">
           <div>
@@ -764,8 +809,14 @@
 
     function renderMaterialList() {
       const ul = document.getElementById('masterMaterialUl');
-      const targetDiv = activeDivision ? activeDivision.name.trim().toLowerCase() : null;
-      const list = targetDiv ? allMaterials.filter(m => m.division_name && m.division_name.trim().toLowerCase() === targetDiv) : allMaterials;
+      let list = allMaterials;
+      if (activeDivision) {
+        const target = activeDivision.name.trim().toLowerCase();
+        list = allMaterials.filter(m => m.division_name && m.division_name.trim().toLowerCase() === target);
+      } else if (currentUser.division_name.toUpperCase() !== 'ALL') {
+        list = allMaterials.filter(m => isUserAllowedForDivision(currentUser.division_name, m.division_name));
+      }
+
       ul.innerHTML = list.map(m => `
         <li class="flex justify-between items-center py-1">
           <div>
@@ -853,7 +904,12 @@
       let c1 = 0, c2 = 0, c3 = 0;
 
       cachedQueues.forEach(item => {
-        if (activeDivision && item.division.trim().toLowerCase() !== activeDivision.name.trim().toLowerCase()) return;
+        // Saring antrean sesuai hak akses divisi user
+        if (activeDivision) {
+          if (item.division.trim().toLowerCase() !== activeDivision.name.trim().toLowerCase()) return;
+        } else if (currentUser.division_name.toUpperCase() !== 'ALL') {
+          if (!isUserAllowedForDivision(currentUser.division_name, item.division)) return;
+        }
 
         if (item.status === 'Selesai') {
           const compDate = item.completed_at ? item.completed_at.slice(0, 10) : '';
@@ -877,7 +933,6 @@
     function createBoardCard(item) {
       const actColor = item.activity_type === 'Bongkar' ? 'bg-amber-100 text-amber-800' : 'bg-purple-100 text-purple-800';
       
-      // Penanda pelaku di kartu
       let actorTag = '';
       if (item.status === 'Menunggu') {
         actorTag = `Tiket: ${item.created_by || '-'}`;
@@ -888,18 +943,20 @@
       }
 
       let actionBtn = '';
-      if (item.status === 'Menunggu') {
-        actionBtn = `
-          <button onclick="updateQueueStatus(${item.id}, 'Proses')" class="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs py-2 rounded-lg transition">
-            Mulai ${item.activity_type} →
-          </button>
-        `;
-      } else if (item.status === 'Proses') {
-        actionBtn = `
-          <button onclick="updateQueueStatus(${item.id}, 'Selesai')" class="w-full mt-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs py-2 rounded-lg transition">
-            Tandai Selesai ${item.activity_type} ✓
-          </button>
-        `;
+      if (activeRoleRules.can_operate_dock) {
+        if (item.status === 'Menunggu') {
+          actionBtn = `
+            <button onclick="updateQueueStatus(${item.id}, 'Proses')" class="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs py-2 rounded-lg transition">
+              Mulai ${item.activity_type} →
+            </button>
+          `;
+        } else if (item.status === 'Proses') {
+          actionBtn = `
+            <button onclick="updateQueueStatus(${item.id}, 'Selesai')" class="w-full mt-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs py-2 rounded-lg transition">
+              Tandai Selesai ${item.activity_type} ✓
+            </button>
+          `;
+        }
       }
 
       return `
@@ -957,7 +1014,7 @@
       });
     }, 1000);
 
-    // Registrasi Truk (Merekam created_by)
+    // Registrasi Truk
     document.getElementById('queueForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('btnSubmitQueue');
@@ -1034,15 +1091,21 @@
       const { data, error } = await query;
       if (error) { alert(error.message); return; }
 
-      document.getElementById('rekapCount').innerText = `${data.length} data ditemukan`;
+      // Filter tambahan jika user multi-divisi (bukan ALL dan bukan 1 divisi terkunci)
+      let filteredData = data || [];
+      if (!activeDivision && currentUser.division_name.toUpperCase() !== 'ALL') {
+        filteredData = filteredData.filter(item => isUserAllowedForDivision(currentUser.division_name, item.division));
+      }
+
+      document.getElementById('rekapCount').innerText = `${filteredData.length} data ditemukan`;
       const tbody = document.getElementById('rekapTableBody');
 
-      if (data.length === 0) {
+      if (filteredData.length === 0) {
         tbody.innerHTML = '<tr><td colspan="9" class="p-6 text-center text-slate-400">Tidak ada data sesuai kriteria</td></tr>';
         return;
       }
 
-      tbody.innerHTML = data.map(item => {
+      tbody.innerHTML = filteredData.map(item => {
         const tArr = new Date(item.arrived_at).getTime();
         const tPrc = item.process_started_at ? new Date(item.process_started_at).getTime() : null;
         const tCmp = item.completed_at ? new Date(item.completed_at).getTime() : null;
@@ -1123,7 +1186,7 @@
     document.getElementById('filterStartDate').value = firstDay;
     document.getElementById('filterEndDate').value = today.toISOString().slice(0, 10);
 
-    // Cek apakah sudah ada sesi login aktif di browser
+    // Cek sesi login aktif
     const savedSession = sessionStorage.getItem('dock_user_session');
     if (savedSession) {
       currentUser = JSON.parse(savedSession);
