@@ -9,293 +9,354 @@
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen">
 
-  <!-- Header Navigasi -->
-  <header class="bg-slate-900 text-white shadow sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
-      <div>
-        <h1 id="appTitle" class="text-base sm:text-lg font-bold tracking-tight flex items-center gap-2">
-          🚛 Smart Dock Control
-        </h1>
-        <p id="appSubtitle" class="text-[11px] text-slate-400">Portal Antrean Terintegrasi</p>
+  <!-- ================= LAYAR LOGIN PETUGAS ================= -->
+  <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4 bg-slate-900">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-7 space-y-5">
+      <div class="text-center">
+        <div class="w-12 h-12 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center text-2xl mx-auto mb-3">
+          🚛
+        </div>
+        <h1 class="text-lg font-bold text-slate-800">Smart Dock Control</h1>
+        <p id="loginPortalLabel" class="text-xs text-slate-500 mt-1">Silakan masuk menggunakan ID & PIN Petugas</p>
       </div>
 
-      <div class="flex flex-wrap items-center gap-3">
-        <!-- Badge Mode Terkunci Divisi -->
-      <!-- Badge Mode Terkunci Divisi (Tanpa Akses Keluar) -->
-        <div id="divisionLockBadge" class="hidden items-center gap-1.5 bg-blue-900/90 border border-blue-500 px-3 py-1 rounded-lg text-xs font-semibold text-blue-200 shadow-sm">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>Portal:</span>
-          <span id="lockedDivisionName" class="text-white font-bold"></span>
+      <form id="loginForm" class="space-y-4 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">User ID</label>
+          <input type="text" id="loginUserId" placeholder="Contoh: chk01 / adm01 / spv01" required autocomplete="off"
+            class="w-full border border-slate-300 p-2.5 rounded-lg outline-none focus:border-blue-600 font-mono">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">PIN / Password</label>
+          <input type="password" id="loginPin" placeholder="••••" required
+            class="w-full border border-slate-300 p-2.5 rounded-lg outline-none focus:border-blue-600 font-mono tracking-widest">
         </div>
 
-        <nav class="flex bg-slate-800 p-1 rounded-lg border border-slate-700 text-xs">
-          <button onclick="switchTab('board')" id="tabBtnBoard" class="px-3 py-1 font-bold rounded bg-blue-600 text-white transition">
-            Board Antrean
-          </button>
-          <button onclick="switchTab('rekap')" id="tabBtnRekap" class="px-3 py-1 font-medium text-slate-300 hover:text-white rounded transition">
-            Rekap & Periode
-          </button>
-          <button onclick="switchTab('master')" id="tabBtnMaster" class="px-3 py-1 font-medium text-slate-300 hover:text-white rounded transition">
-            Kelola Master
-          </button>
-        </nav>
-      </div>
+        <div id="loginErrorMsg" class="hidden bg-red-50 border border-red-200 text-red-700 p-2.5 rounded-lg text-[11px] font-medium"></div>
+
+        <button type="submit" id="btnLogin" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg transition shadow-sm">
+          Masuk ke Sistem →
+        </button>
+      </form>
     </div>
-  </header>
+  </div>
 
-  <main class="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
-
-    <!-- ================= HALAMAN 1: BOARD ANTREAN ================= -->
-    <section id="viewBoard" class="space-y-6">
-      
-      <!-- Form Input Truk Masuk -->
-      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-        <div class="flex justify-between items-center mb-3">
-          <h2 class="text-xs font-bold uppercase text-slate-500 tracking-wider">
-            Registrasi Kedatangan Armada (Pos Gerbang)
-          </h2>
-          <span id="formDivisionIndicator" class="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200">
-            Semua Divisi
-          </span>
+  <!-- ================= APLIKASI UTAMA (TERSEMBUNYI SEBELUM LOGIN) ================= -->
+  <div id="mainApp" class="hidden">
+    
+    <!-- Header Navigasi -->
+    <header class="bg-slate-900 text-white shadow sticky top-0 z-40">
+      <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
+        <div>
+          <h1 class="text-base sm:text-lg font-bold tracking-tight flex items-center gap-2">
+            🚛 Smart Dock Control
+          </h1>
+          <p id="appSubtitle" class="text-[11px] text-slate-400">Portal Antrean Terintegrasi</p>
         </div>
 
-        <form id="queueForm" class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-6 gap-3">
-          <!-- Pilih Divisi -->
-          <div>
-            <label class="block text-xs font-medium text-slate-600 mb-1">Tujuan Divisi</label>
-            <select id="inputDivision" required onchange="onDivisionChange()" class="w-full border border-slate-300 p-2 rounded-lg text-xs bg-white outline-none focus:border-blue-600">
-              <option value="">Memuat...</option>
-            </select>
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+          <!-- Badge Mode Terkunci Divisi -->
+          <div id="divisionLockBadge" class="hidden items-center gap-1.5 bg-blue-900/90 border border-blue-500 px-2.5 py-1 rounded-lg text-xs font-semibold text-blue-200">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span id="lockedDivisionName" class="text-white font-bold"></span>
           </div>
 
-          <!-- Aktivitas (Bongkar / Muat) -->
-          <div>
-            <label class="block text-xs font-medium text-slate-600 mb-1">Aktivitas</label>
-            <select id="inputActivity" required class="w-full border border-slate-300 p-2 rounded-lg text-xs bg-white font-bold text-slate-800 outline-none focus:border-blue-600">
-              <option value="Bongkar">Bongkar (Inbound)</option>
-              <option value="Muat">Muat (Outbound)</option>
-            </select>
-          </div>
-
-          <!-- Vendor (Otomatis Sesuai Divisi) -->
-          <div>
-            <label class="block text-xs font-medium text-slate-600 mb-1">Vendor / Ekspedisi</label>
-            <select id="inputVendor" required class="w-full border border-slate-300 p-2 rounded-lg text-xs bg-white outline-none focus:border-blue-600">
-              <option value="">Pilih divisi dulu...</option>
-            </select>
-          </div>
-
-          <!-- Jenis Mobil (Global) -->
-          <div>
-            <label class="block text-xs font-medium text-slate-600 mb-1">Jenis Armada</label>
-            <select id="inputVehicle" required class="w-full border border-slate-300 p-2 rounded-lg text-xs bg-white outline-none focus:border-blue-600">
-              <option value="">Memuat...</option>
-            </select>
-          </div>
-
-          <!-- No Polisi -->
-          <div>
-            <label class="block text-xs font-medium text-slate-600 mb-1">No. Polisi Truk</label>
-            <input type="text" id="inputPlate" placeholder="Cth: L 1234 AB" required class="w-full border border-slate-300 p-2 rounded-lg text-xs uppercase outline-none focus:border-blue-600">
-          </div>
-
-          <!-- Muatan (Otomatis Sesuai Divisi) -->
-          <div>
-            <label class="block text-xs font-medium text-slate-600 mb-1">Jenis Muatan / Barang</label>
-            <select id="inputMaterial" required class="w-full border border-slate-300 p-2 rounded-lg text-xs bg-white outline-none focus:border-blue-600">
-              <option value="">Pilih divisi dulu...</option>
-            </select>
-          </div>
-
-          <div class="sm:col-span-3 md:col-span-6 flex justify-end mt-1">
-            <button type="submit" id="btnSubmitQueue" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-lg text-xs transition shadow-sm">
-              + Generate Tiket & Antrekan
+          <!-- Navigasi Menu -->
+          <nav class="flex bg-slate-800 p-1 rounded-lg border border-slate-700 text-xs">
+            <button onclick="switchTab('board')" id="tabBtnBoard" class="px-3 py-1 font-bold rounded bg-blue-600 text-white transition">
+              Board Antrean
             </button>
-          </div>
-        </form>
-      </div>
+            <button onclick="switchTab('rekap')" id="tabBtnRekap" class="px-3 py-1 font-medium text-slate-300 hover:text-white rounded transition">
+              Rekap & Periode
+            </button>
+            <button onclick="switchTab('master')" id="tabBtnMaster" class="px-3 py-1 font-medium text-slate-300 hover:text-white rounded transition">
+              Kelola Master
+            </button>
+          </nav>
 
-      <!-- Tiga Kolom Antrean -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        
-        <!-- Kolom: Menunggu -->
-        <div class="bg-amber-50/70 border border-amber-200 rounded-xl p-4 flex flex-col">
-          <div class="flex justify-between items-center mb-3">
-            <h3 class="font-bold text-amber-900 text-xs uppercase tracking-wider flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> 1. Menunggu Antrean
-            </h3>
-            <span id="badgeCountMenunggu" class="text-xs bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-bold">0</span>
-          </div>
-          <div id="colMenunggu" class="space-y-3 flex-1 overflow-y-auto"></div>
-        </div>
-
-        <!-- Kolom: Sedang Dikerjakan -->
-        <div class="bg-blue-50/70 border border-blue-200 rounded-xl p-4 flex flex-col">
-          <div class="flex justify-between items-center mb-3">
-            <h3 class="font-bold text-blue-900 text-xs uppercase tracking-wider flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span> 2. Sedang Dikerjakan (Dock)
-            </h3>
-            <span id="badgeCountProses" class="text-xs bg-blue-200 text-blue-900 px-2 py-0.5 rounded-full font-bold">0</span>
-          </div>
-          <div id="colProses" class="space-y-3 flex-1 overflow-y-auto"></div>
-        </div>
-
-        <!-- Kolom: Selesai Hari Ini -->
-        <div class="bg-emerald-50/70 border border-emerald-200 rounded-xl p-4 flex flex-col">
-          <div class="flex justify-between items-center mb-3">
-            <h3 class="font-bold text-emerald-900 text-xs uppercase tracking-wider flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> 3. Selesai Hari Ini
-            </h3>
-            <span id="badgeCountSelesai" class="text-xs bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full font-bold">0</span>
-          </div>
-          <div id="colSelesai" class="space-y-3 flex-1 overflow-y-auto max-h-[600px]"></div>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- ================= HALAMAN 2: REKAP & PERIODE ================= -->
-    <section id="viewRekap" class="hidden space-y-5">
-      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-        <h2 class="text-sm font-bold text-slate-800 mb-3">Filter Riwayat & Audit SLA</h2>
-        
-        <div class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-6 gap-3 text-xs">
-          <div>
-            <label class="block font-medium text-slate-600 mb-1">Dari Tanggal</label>
-            <input type="date" id="filterStartDate" class="w-full border border-slate-300 p-2 rounded-lg outline-none">
-          </div>
-          <div>
-            <label class="block font-medium text-slate-600 mb-1">Sampai Tanggal</label>
-            <input type="date" id="filterEndDate" class="w-full border border-slate-300 p-2 rounded-lg outline-none">
-          </div>
-          <div>
-            <label class="block font-medium text-slate-600 mb-1">Divisi</label>
-            <select id="filterDivisi" class="w-full border border-slate-300 p-2 rounded-lg outline-none">
-              <option value="">Semua Divisi</option>
-            </select>
-          </div>
-          <div>
-            <label class="block font-medium text-slate-600 mb-1">Aktivitas</label>
-            <select id="filterActivity" class="w-full border border-slate-300 p-2 rounded-lg outline-none">
-              <option value="">Semua</option>
-              <option value="Bongkar">Bongkar</option>
-              <option value="Muat">Muat</option>
-            </select>
-          </div>
-          <div>
-            <label class="block font-medium text-slate-600 mb-1">Status</label>
-            <select id="filterStatus" class="w-full border border-slate-300 p-2 rounded-lg outline-none">
-              <option value="">Semua</option>
-              <option value="Menunggu">Menunggu</option>
-              <option value="Proses">Sedang Dikerjakan</option>
-              <option value="Selesai">Selesai</option>
-            </select>
-          </div>
-          <div class="flex items-end">
-            <button onclick="applyReportFilter()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium p-2 rounded-lg transition">
-              Terapkan Filter
+          <!-- Info User Aktif, Ubah PIN & Logout -->
+          <div class="flex items-center gap-1.5 bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-lg text-xs">
+            <span class="text-slate-300">👤 <strong id="headerUserName" class="text-white">-</strong></span>
+            <span id="headerUserRole" class="text-[10px] px-1.5 py-0.5 rounded bg-blue-600/30 text-blue-300 font-bold border border-blue-500/40">-</span>
+            
+            <button onclick="openChangePinModal()" title="Ubah PIN Pribadi" class="ml-1 bg-slate-700 hover:bg-slate-600 text-amber-300 px-2 py-0.5 rounded text-[11px] font-medium transition">
+              🔑 Ubah PIN
+            </button>
+            <button onclick="logoutUser()" title="Ganti Shift / Keluar" class="bg-red-900/60 hover:bg-red-700 text-red-200 px-2 py-0.5 rounded text-[11px] font-medium transition">
+              Keluar
             </button>
           </div>
         </div>
       </div>
+    </header>
 
-      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="p-4 border-b border-slate-200 flex justify-between items-center">
-          <h3 class="text-xs font-bold text-slate-700 uppercase">Data Hasil Filter (Klik ID Tiket untuk Detail)</h3>
-          <span id="rekapCount" class="text-xs text-slate-500">0 data ditemukan</span>
+    <main class="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+
+      <!-- ================= HALAMAN 1: BOARD ANTREAN ================= -->
+      <section id="viewBoard" class="space-y-6">
+        
+        <!-- Form Input Truk Masuk (Otomatis Disembunyikan untuk Role Checker) -->
+        <div id="gateRegistrationCard" class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div class="flex justify-between items-center mb-3">
+            <h2 class="text-xs font-bold uppercase text-slate-500 tracking-wider">
+              Registrasi Kedatangan Armada (Pos Gerbang)
+            </h2>
+            <span id="formDivisionIndicator" class="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200">
+              Semua Divisi
+            </span>
+          </div>
+
+          <form id="queueForm" class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-6 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Tujuan Divisi</label>
+              <select id="inputDivision" required onchange="onDivisionChange()" class="w-full border border-slate-300 p-2 rounded-lg text-xs bg-white outline-none focus:border-blue-600">
+                <option value="">Memuat...</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Aktivitas</label>
+              <select id="inputActivity" required class="w-full border border-slate-300 p-2 rounded-lg text-xs bg-white font-bold text-slate-800 outline-none focus:border-blue-600">
+                <option value="Bongkar">Bongkar (Inbound)</option>
+                <option value="Muat">Muat (Outbound)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Vendor / Ekspedisi</label>
+              <select id="inputVendor" required class="w-full border border-slate-300 p-2 rounded-lg text-xs bg-white outline-none focus:border-blue-600">
+                <option value="">Pilih divisi dulu...</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Jenis Armada</label>
+              <select id="inputVehicle" required class="w-full border border-slate-300 p-2 rounded-lg text-xs bg-white outline-none focus:border-blue-600">
+                <option value="">Memuat...</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">No. Polisi Truk</label>
+              <input type="text" id="inputPlate" placeholder="Cth: L 1234 AB" required class="w-full border border-slate-300 p-2 rounded-lg text-xs uppercase outline-none focus:border-blue-600">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Jenis Muatan / Barang</label>
+              <select id="inputMaterial" required class="w-full border border-slate-300 p-2 rounded-lg text-xs bg-white outline-none focus:border-blue-600">
+                <option value="">Pilih divisi dulu...</option>
+              </select>
+            </div>
+
+            <div class="sm:col-span-3 md:col-span-6 flex justify-end mt-1">
+              <button type="submit" id="btnSubmitQueue" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-lg text-xs transition shadow-sm">
+                + Generate Tiket & Antrekan
+              </button>
+            </div>
+          </form>
         </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs">
-            <thead class="bg-slate-50 text-slate-600 uppercase border-b border-slate-200 font-semibold">
-              <tr>
-                <th class="p-3">ID Tiket</th>
-                <th class="p-3">Tgl Tiba</th>
-                <th class="p-3">Divisi</th>
-                <th class="p-3">Aktivitas</th>
-                <th class="p-3">Vendor / Nopol</th>
-                <th class="p-3">Muatan</th>
-                <th class="p-3">Durasi Antre</th>
-                <th class="p-3">Durasi Pengerjaan</th>
-                <th class="p-3">Total Lead Time</th>
-                <th class="p-3 text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody id="rekapTableBody" class="divide-y divide-slate-100">
-              <tr><td colspan="10" class="p-6 text-center text-slate-400">Silakan terapkan filter untuk menampilkan data</td></tr>
-            </tbody>
-          </table>
+
+        <!-- Tiga Kolom Antrean -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-amber-50/70 border border-amber-200 rounded-xl p-4 flex flex-col">
+            <div class="flex justify-between items-center mb-3">
+              <h3 class="font-bold text-amber-900 text-xs uppercase tracking-wider flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> 1. Menunggu Antrean
+              </h3>
+              <span id="badgeCountMenunggu" class="text-xs bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-bold">0</span>
+            </div>
+            <div id="colMenunggu" class="space-y-3 flex-1 overflow-y-auto"></div>
+          </div>
+
+          <div class="bg-blue-50/70 border border-blue-200 rounded-xl p-4 flex flex-col">
+            <div class="flex justify-between items-center mb-3">
+              <h3 class="font-bold text-blue-900 text-xs uppercase tracking-wider flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span> 2. Sedang Dikerjakan (Dock)
+              </h3>
+              <span id="badgeCountProses" class="text-xs bg-blue-200 text-blue-900 px-2 py-0.5 rounded-full font-bold">0</span>
+            </div>
+            <div id="colProses" class="space-y-3 flex-1 overflow-y-auto"></div>
+          </div>
+
+          <div class="bg-emerald-50/70 border border-emerald-200 rounded-xl p-4 flex flex-col">
+            <div class="flex justify-between items-center mb-3">
+              <h3 class="font-bold text-emerald-900 text-xs uppercase tracking-wider flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> 3. Selesai Hari Ini
+              </h3>
+              <span id="badgeCountSelesai" class="text-xs bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full font-bold">0</span>
+            </div>
+            <div id="colSelesai" class="space-y-3 flex-1 overflow-y-auto max-h-[600px]"></div>
+          </div>
         </div>
+      </section>
+
+      <!-- ================= HALAMAN 2: REKAP & PERIODE ================= -->
+      <section id="viewRekap" class="hidden space-y-5">
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <h2 class="text-sm font-bold text-slate-800 mb-3">Filter Riwayat & Audit SLA</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-6 gap-3 text-xs">
+            <div>
+              <label class="block font-medium text-slate-600 mb-1">Dari Tanggal</label>
+              <input type="date" id="filterStartDate" class="w-full border border-slate-300 p-2 rounded-lg outline-none">
+            </div>
+            <div>
+              <label class="block font-medium text-slate-600 mb-1">Sampai Tanggal</label>
+              <input type="date" id="filterEndDate" class="w-full border border-slate-300 p-2 rounded-lg outline-none">
+            </div>
+            <div>
+              <label class="block font-medium text-slate-600 mb-1">Divisi</label>
+              <select id="filterDivisi" class="w-full border border-slate-300 p-2 rounded-lg outline-none">
+                <option value="">Semua Divisi</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-medium text-slate-600 mb-1">Aktivitas</label>
+              <select id="filterActivity" class="w-full border border-slate-300 p-2 rounded-lg outline-none">
+                <option value="">Semua</option>
+                <option value="Bongkar">Bongkar</option>
+                <option value="Muat">Muat</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-medium text-slate-600 mb-1">Status</label>
+              <select id="filterStatus" class="w-full border border-slate-300 p-2 rounded-lg outline-none">
+                <option value="">Semua</option>
+                <option value="Menunggu">Menunggu</option>
+                <option value="Proses">Sedang Dikerjakan</option>
+                <option value="Selesai">Selesai</option>
+              </select>
+            </div>
+            <div class="flex items-end">
+              <button onclick="applyReportFilter()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium p-2 rounded-lg transition">
+                Terapkan Filter
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="p-4 border-b border-slate-200 flex justify-between items-center">
+            <h3 class="text-xs font-bold text-slate-700 uppercase">Data Hasil Filter (Klik ID Tiket untuk Audit Trail Lengkap)</h3>
+            <span id="rekapCount" class="text-xs text-slate-500">0 data ditemukan</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-600 uppercase border-b border-slate-200 font-semibold">
+                <tr>
+                  <th class="p-3">ID Tiket</th>
+                  <th class="p-3">Tgl Tiba</th>
+                  <th class="p-3">Divisi</th>
+                  <th class="p-3">Aktivitas</th>
+                  <th class="p-3">Vendor / Nopol</th>
+                  <th class="p-3">Durasi Antre</th>
+                  <th class="p-3">Durasi Pengerjaan</th>
+                  <th class="p-3">Petugas Terakhir</th>
+                  <th class="p-3 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody id="rekapTableBody" class="divide-y divide-slate-100">
+                <tr><td colspan="9" class="p-6 text-center text-slate-400">Silakan terapkan filter untuk menampilkan data</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= HALAMAN 3: KELOLA MASTER DATA (KHUSUS SUPERVISOR) ================= -->
+      <section id="viewMaster" class="hidden space-y-6">
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <h2 class="text-sm font-bold text-slate-800 mb-1">Manajemen Master Data Operasional</h2>
+          <p class="text-xs text-slate-500 mb-5">Dikelola khusus oleh Supervisor. Akun User ID & Password petugas dikelola terpusat oleh Administrator sistem.</p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+            <!-- Master Divisi -->
+            <div id="colMasterDivisiWrapper" class="p-3 bg-slate-50 rounded-lg border border-slate-200 flex flex-col">
+              <h3 class="font-bold mb-1 text-slate-800">1. Master Divisi</h3>
+              <p class="text-[10px] text-slate-400 mb-2">Tautan URL otomatis tercipta</p>
+              <div class="space-y-1.5 mb-2">
+                <input type="text" id="addDivisiName" placeholder="Nama Divisi Baru" class="w-full border p-1.5 rounded outline-none text-xs">
+                <input type="text" id="addDivisiCode" placeholder="Kode URL (cth: packaging)" class="w-full border p-1.5 rounded outline-none text-xs font-mono">
+                <button onclick="addDivision()" class="w-full bg-blue-600 text-white p-1.5 rounded font-bold hover:bg-blue-700">+ Tambah Divisi</button>
+              </div>
+              <ul id="masterDivisiUl" class="space-y-1.5 max-h-56 overflow-y-auto divide-y divide-slate-200 bg-white p-2 rounded border flex-1"></ul>
+            </div>
+
+            <!-- Master Vendor -->
+            <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 flex flex-col">
+              <h3 class="font-bold mb-1 text-slate-800">2. Master Vendor</h3>
+              <p class="text-[10px] text-slate-400 mb-2">Terikat ke divisi</p>
+              <div class="space-y-1.5 mb-2">
+                <select id="addVendorDivisi" class="w-full border p-1.5 rounded outline-none text-xs bg-white"></select>
+                <input type="text" id="addVendorName" placeholder="Nama Vendor / Supplier" class="w-full border p-1.5 rounded outline-none text-xs">
+                <button onclick="addVendor()" class="w-full bg-blue-600 text-white p-1.5 rounded font-bold hover:bg-blue-700">+ Tambah Vendor</button>
+              </div>
+              <ul id="masterVendorUl" class="space-y-1 max-h-56 overflow-y-auto divide-y divide-slate-200 bg-white p-2 rounded border flex-1"></ul>
+            </div>
+
+            <!-- Master Armada -->
+            <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 flex flex-col">
+              <h3 class="font-bold mb-1 text-slate-800">3. Jenis Armada (Global)</h3>
+              <p class="text-[10px] text-slate-400 mb-2">Berlaku semua divisi</p>
+              <div class="flex gap-1.5 mb-2">
+                <input type="text" id="addVehicleVal" placeholder="Jenis Truk" class="flex-1 border p-1.5 rounded outline-none text-xs">
+                <button onclick="addMasterGeneric('master_vehicle_types', 'addVehicleVal')" class="bg-blue-600 text-white px-3 rounded font-bold hover:bg-blue-700">+</button>
+              </div>
+              <ul id="masterVehicleUl" class="space-y-1 max-h-56 overflow-y-auto divide-y divide-slate-200 bg-white p-2 rounded border flex-1"></ul>
+            </div>
+
+            <!-- Master Muatan -->
+            <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 flex flex-col">
+              <h3 class="font-bold mb-1 text-slate-800">4. Master Muatan / Barang</h3>
+              <p class="text-[10px] text-slate-400 mb-2">Terikat ke divisi</p>
+              <div class="space-y-1.5 mb-2">
+                <select id="addMaterialDivisi" class="w-full border p-1.5 rounded outline-none text-xs bg-white"></select>
+                <input type="text" id="addMaterialName" placeholder="Jenis Muatan" class="w-full border p-1.5 rounded outline-none text-xs">
+                <button onclick="addMaterial()" class="w-full bg-blue-600 text-white p-1.5 rounded font-bold hover:bg-blue-700">+ Tambah Muatan</button>
+              </div>
+              <ul id="masterMaterialUl" class="space-y-1 max-h-56 overflow-y-auto divide-y divide-slate-200 bg-white p-2 rounded border flex-1"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ================= MODAL UBAH PIN MANDIRI ================= -->
+  <div id="modalChangePin" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full p-6 space-y-4">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="text-sm font-bold text-slate-800">🔑 Ubah PIN Pribadi</h3>
+        <button onclick="closeChangePinModal()" class="text-slate-400 hover:text-slate-700 font-bold">✕</button>
       </div>
-    </section>
-
-    <!-- ================= HALAMAN 3: KELOLA MASTER DATA ================= -->
-    <section id="viewMaster" class="hidden space-y-6">
-      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-        <h2 class="text-sm font-bold text-slate-800 mb-1">Manajemen Master Data Terisolasi</h2>
-        <p class="text-xs text-slate-500 mb-5">Vendor dan Muatan terikat khusus ke divisi masing-masing. Setiap divisi memiliki tautan portal kerja mandiri.</p>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-          
-          <!-- Master Divisi + Fitur Copy Link Otomatis -->
-          <div id="colMasterDivisiWrapper" class="p-3 bg-slate-50 rounded-lg border border-slate-200 flex flex-col">
-            <h3 class="font-bold mb-1 text-slate-800">1. Master Divisi</h3>
-            <p class="text-[10px] text-slate-400 mb-2">Tautan URL otomatis tercipta</p>
-            <div class="space-y-1.5 mb-2">
-              <input type="text" id="addDivisiName" placeholder="Nama Divisi Baru" class="w-full border p-1.5 rounded outline-none text-xs">
-              <input type="text" id="addDivisiCode" placeholder="Kode URL (cth: packaging)" class="w-full border p-1.5 rounded outline-none text-xs font-mono">
-              <button onclick="addDivision()" class="w-full bg-blue-600 text-white p-1.5 rounded font-bold hover:bg-blue-700">+ Tambah Divisi</button>
-            </div>
-            <ul id="masterDivisiUl" class="space-y-1.5 max-h-56 overflow-y-auto divide-y divide-slate-200 bg-white p-2 rounded border flex-1"></ul>
-          </div>
-
-          <!-- Master Vendor (Terikat Divisi) -->
-          <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 flex flex-col">
-            <h3 class="font-bold mb-1 text-slate-800">2. Master Vendor</h3>
-            <p class="text-[10px] text-slate-400 mb-2">Pilih divisi kepemilikan</p>
-            <div class="space-y-1.5 mb-2">
-              <select id="addVendorDivisi" class="w-full border p-1.5 rounded outline-none text-xs bg-white"></select>
-              <input type="text" id="addVendorName" placeholder="Nama Vendor / Supplier" class="w-full border p-1.5 rounded outline-none text-xs">
-              <button onclick="addVendor()" class="w-full bg-blue-600 text-white p-1.5 rounded font-bold hover:bg-blue-700">+ Tambah Vendor</button>
-            </div>
-            <ul id="masterVendorUl" class="space-y-1 max-h-56 overflow-y-auto divide-y divide-slate-200 bg-white p-2 rounded border flex-1"></ul>
-          </div>
-
-          <!-- Master Armada (Global) -->
-          <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 flex flex-col">
-            <h3 class="font-bold mb-1 text-slate-800">3. Jenis Armada (Global)</h3>
-            <p class="text-[10px] text-slate-400 mb-2">Berlaku untuk semua divisi</p>
-            <div class="flex gap-1.5 mb-2">
-              <input type="text" id="addVehicleVal" placeholder="Jenis Truk" class="flex-1 border p-1.5 rounded outline-none text-xs">
-              <button onclick="addMasterGeneric('master_vehicle_types', 'addVehicleVal')" class="bg-blue-600 text-white px-3 rounded font-bold hover:bg-blue-700">+</button>
-            </div>
-            <ul id="masterVehicleUl" class="space-y-1 max-h-56 overflow-y-auto divide-y divide-slate-200 bg-white p-2 rounded border flex-1"></ul>
-          </div>
-
-          <!-- Master Muatan (Terikat Divisi) -->
-          <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 flex flex-col">
-            <h3 class="font-bold mb-1 text-slate-800">4. Master Muatan / Barang</h3>
-            <p class="text-[10px] text-slate-400 mb-2">Pilih divisi kepemilikan</p>
-            <div class="space-y-1.5 mb-2">
-              <select id="addMaterialDivisi" class="w-full border p-1.5 rounded outline-none text-xs bg-white"></select>
-              <input type="text" id="addMaterialName" placeholder="Jenis Muatan" class="w-full border p-1.5 rounded outline-none text-xs">
-              <button onclick="addMaterial()" class="w-full bg-blue-600 text-white p-1.5 rounded font-bold hover:bg-blue-700">+ Tambah Muatan</button>
-            </div>
-            <ul id="masterMaterialUl" class="space-y-1 max-h-56 overflow-y-auto divide-y divide-slate-200 bg-white p-2 rounded border flex-1"></ul>
-          </div>
-
+      <form id="changePinForm" class="space-y-3 text-xs">
+        <div>
+          <label class="block font-medium text-slate-600 mb-1">PIN Lama</label>
+          <input type="password" id="oldPinInput" required class="w-full border border-slate-300 p-2 rounded-lg outline-none focus:border-blue-600 font-mono">
         </div>
-      </div>
-    </section>
+        <div>
+          <label class="block font-medium text-slate-600 mb-1">PIN Baru (Minimal 4 Karakter)</label>
+          <input type="password" id="newPinInput" minlength="4" required class="w-full border border-slate-300 p-2 rounded-lg outline-none focus:border-blue-600 font-mono">
+        </div>
+        <div>
+          <label class="block font-medium text-slate-600 mb-1">Konfirmasi PIN Baru</label>
+          <input type="password" id="confirmPinInput" minlength="4" required class="w-full border border-slate-300 p-2 rounded-lg outline-none focus:border-blue-600 font-mono">
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeChangePinModal()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-medium">Batal</button>
+          <button type="submit" id="btnSaveNewPin" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold">Simpan PIN Baru</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
-  </main>
-
-  <!-- ================= MODAL DETAIL KRONOLOGIS TRANSAKSI ================= -->
+  <!-- ================= MODAL DETAIL AUDIT TRAIL TRANSAKSI ================= -->
   <div id="modalDetail" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 space-y-4">
       <div class="flex justify-between items-center border-b pb-3">
         <div>
           <span id="modalQueueCode" class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800">TRK-XXX</span>
-          <h2 class="text-base font-bold text-slate-800 mt-1">Audit Trail & Detail Logistik</h2>
+          <h2 class="text-base font-bold text-slate-800 mt-1">Audit Trail & Jejak Petugas</h2>
         </div>
         <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700 text-lg font-bold">✕</button>
       </div>
@@ -310,19 +371,22 @@
       </div>
 
       <div class="space-y-3 text-xs">
-        <h4 class="font-bold text-slate-700 uppercase tracking-wide text-[11px]">Timeline Waktu Pelaksanaan</h4>
+        <h4 class="font-bold text-slate-700 uppercase tracking-wide text-[11px]">Kronologi Waktu & Penanggung Jawab</h4>
         <div class="border-l-2 border-blue-500 pl-4 space-y-3">
           <div>
             <p class="font-bold text-slate-800">1. Registrasi Pos Gerbang (Tiba)</p>
             <p id="mTimeArrived" class="text-slate-500 font-mono">-</p>
+            <p id="mUserArrived" class="text-[11px] text-blue-700 font-semibold mt-0.5">-</p>
           </div>
           <div>
             <p class="font-bold text-slate-800">2. Panggilan Masuk Dock (Mulai Pengerjaan)</p>
             <p id="mTimeProcess" class="text-slate-500 font-mono">-</p>
+            <p id="mUserProcess" class="text-[11px] text-blue-700 font-semibold mt-0.5">-</p>
           </div>
           <div>
             <p class="font-bold text-slate-800">3. Penutupan Surat Jalan (Selesai)</p>
             <p id="mTimeCompleted" class="text-slate-500 font-mono">-</p>
+            <p id="mUserCompleted" class="text-[11px] text-emerald-700 font-semibold mt-0.5">-</p>
           </div>
         </div>
       </div>
@@ -356,6 +420,7 @@
     const SUPABASE_KEY = "sb_publishable_2O0mA4TLwdB95scC9Im6IQ_hHmaKNEJ";
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    let currentUser = null; // Menyimpan sesi login petugas
     let activeDivision = null;
     let allDivisions = [];
     let allVendors = [];
@@ -388,6 +453,149 @@
       }) + ' WIB';
     }
 
+    // ================= LOGIKA LOGIN & KEAMANAN =================
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btnLogin');
+      const errEl = document.getElementById('loginErrorMsg');
+      errEl.classList.add('hidden');
+      btn.disabled = true;
+      btn.innerText = 'Memverifikasi...';
+
+      const uid = document.getElementById('loginUserId').value.trim().toLowerCase();
+      const pin = document.getElementById('loginPin').value.trim();
+
+      const { data: user, error } = await db
+        .from('master_users')
+        .select('*')
+        .eq('user_id', uid)
+        .eq('pin', pin)
+        .maybeSingle();
+
+      if (error || !user) {
+        errEl.innerText = 'User ID atau PIN salah! Silakan periksa kembali.';
+        errEl.classList.remove('hidden');
+        btn.disabled = false;
+        btn.innerText = 'Masuk ke Sistem →';
+        return;
+      }
+
+      // Cek apakah link dibuka lewat URL khusus divisi
+      const urlCode = checkUrlParameter();
+      if (urlCode) {
+        const { data: divData } = await db.from('master_divisions').select('*').eq('code', urlCode).maybeSingle();
+        if (divData) {
+          // Validasi apakah akun user punya izin ke divisi ini
+          if (user.division_name !== 'ALL' && user.division_name.trim().toLowerCase() !== divData.name.trim().toLowerCase()) {
+            errEl.innerText = `Akses Ditolak: Akun Anda terdaftar untuk (${user.division_name}), bukan untuk portal ini.`;
+            errEl.classList.remove('hidden');
+            btn.disabled = false;
+            btn.innerText = 'Masuk ke Sistem →';
+            return;
+          }
+        }
+      }
+
+      // Login Sukses -> Simpan sesi ke sessionStorage
+      sessionStorage.setItem('dock_user_session', JSON.stringify(user));
+      currentUser = user;
+      initAuthenticatedApp();
+    });
+
+    function logoutUser() {
+      if (!confirm('Akhiri sesi shift dan keluar dari akun ini?')) return;
+      sessionStorage.removeItem('dock_user_session');
+      location.reload();
+    }
+
+    // Terapkan 3 Layer Hak Akses
+    function applyRolePermissions() {
+      const role = currentUser.role; // 'Admin', 'Checker', atau 'Supervisor'
+
+      document.getElementById('headerUserName').innerText = currentUser.full_name;
+      document.getElementById('headerUserRole').innerText = role;
+
+      const gateFormCard = document.getElementById('gateRegistrationCard');
+      const tabRekap = document.getElementById('tabBtnRekap');
+      const tabMaster = document.getElementById('tabBtnMaster');
+
+      if (role === 'Checker') {
+        // Checker hanya bisa akses board bongkar/muat
+        gateFormCard.classList.add('hidden');
+        tabRekap.classList.add('hidden');
+        tabMaster.classList.add('hidden');
+      } else if (role === 'Admin') {
+        // Admin bisa akses antrean, bongkar, dan rekap. Master disembunyikan.
+        gateFormCard.classList.remove('hidden');
+        tabRekap.classList.remove('hidden');
+        tabMaster.classList.add('hidden');
+      } else if (role === 'Supervisor') {
+        // Supervisor akses penuh
+        gateFormCard.classList.remove('hidden');
+        tabRekap.classList.remove('hidden');
+        tabMaster.classList.remove('hidden');
+      }
+    }
+
+    // Modal Ubah PIN Mandiri
+    function openChangePinModal() {
+      document.getElementById('oldPinInput').value = '';
+      document.getElementById('newPinInput').value = '';
+      document.getElementById('confirmPinInput').value = '';
+      document.getElementById('modalChangePin').classList.remove('hidden');
+    }
+
+    function closeChangePinModal() {
+      document.getElementById('modalChangePin').classList.add('hidden');
+    }
+
+    document.getElementById('changePinForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const oldPin = document.getElementById('oldPinInput').value.trim();
+      const newPin = document.getElementById('newPinInput').value.trim();
+      const confirmPin = document.getElementById('confirmPinInput').value.trim();
+
+      if (oldPin !== currentUser.pin) {
+        alert('PIN Lama yang Anda masukkan salah!');
+        return;
+      }
+      if (newPin !== confirmPin) {
+        alert('Konfirmasi PIN Baru tidak cocok!');
+        return;
+      }
+
+      const btn = document.getElementById('btnSaveNewPin');
+      btn.disabled = true;
+      btn.innerText = 'Menyimpan...';
+
+      const { error } = await db
+        .from('master_users')
+        .update({ pin: newPin })
+        .eq('id', currentUser.id);
+
+      if (error) {
+        alert('Gagal memperbarui PIN: ' + error.message);
+      } else {
+        currentUser.pin = newPin;
+        sessionStorage.setItem('dock_user_session', JSON.stringify(currentUser));
+        alert('PIN pribadi Anda berhasil diperbarui!');
+        closeChangePinModal();
+      }
+
+      btn.disabled = false;
+      btn.innerText = 'Simpan PIN Baru';
+    });
+
+    // ================= INISIALISASI APLIKASI SETELAH LOGIN =================
+    async function initAuthenticatedApp() {
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('mainApp').classList.remove('hidden');
+
+      applyRolePermissions();
+      await loadMasterData();
+      await fetchQueues();
+    }
+
     function switchTab(tab) {
       document.getElementById('viewBoard').classList.add('hidden');
       document.getElementById('viewRekap').classList.add('hidden');
@@ -411,7 +619,6 @@
       }
     }
 
-    // 2. Muat Master Data & Isolasi
     async function loadMasterData() {
       const [dRes, vRes, cRes, mRes] = await Promise.all([
         db.from('master_divisions').select('*').order('id'),
@@ -424,22 +631,25 @@
       allVendors = vRes.data || [];
       allMaterials = mRes.data || [];
 
-      // Periksa Parameter URL
       const urlCode = checkUrlParameter();
       if (urlCode) {
         const found = allDivisions.find(d => d.code && d.code.toLowerCase() === urlCode);
-        if (found) {
-          activeDivision = found;
-          document.getElementById('divisionLockBadge').classList.remove('hidden');
-          document.getElementById('lockedDivisionName').innerText = found.name;
-          document.getElementById('appSubtitle').innerText = `Portal Mandiri: ${found.name}`;
-          document.getElementById('formDivisionIndicator').innerText = `Terkunci: ${found.name}`;
-        }
+        if (found) activeDivision = found;
+      } else if (currentUser && currentUser.division_name !== 'ALL') {
+        // Jika user login dari URL utama tapi akunnya dikunci ke 1 divisi
+        const found = allDivisions.find(d => d.name.trim().toLowerCase() === currentUser.division_name.trim().toLowerCase());
+        if (found) activeDivision = found;
+      }
+
+      if (activeDivision) {
+        document.getElementById('divisionLockBadge').classList.remove('hidden');
+        document.getElementById('lockedDivisionName').innerText = activeDivision.name;
+        document.getElementById('appSubtitle').innerText = `Portal Mandiri: ${activeDivision.name}`;
+        document.getElementById('formDivisionIndicator').innerText = `Terkunci: ${activeDivision.name}`;
       }
 
       const dOpts = allDivisions.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
       
-      // Form Registrasi
       const inputDivEl = document.getElementById('inputDivision');
       if (activeDivision) {
         inputDivEl.innerHTML = `<option value="${activeDivision.name}">${activeDivision.name}</option>`;
@@ -449,13 +659,12 @@
         inputDivEl.disabled = false;
       }
 
-      // Filter di Rekap
       document.getElementById('filterDivisi').innerHTML = '<option value="">Semua Divisi</option>' + dOpts;
       if (activeDivision) {
         document.getElementById('filterDivisi').value = activeDivision.name;
+        document.getElementById('filterDivisi').disabled = true;
       }
 
-      // Halaman Master
       const addVendorDiv = document.getElementById('addVendorDivisi');
       const addMatDiv = document.getElementById('addMaterialDivisi');
       const colDivWrapper = document.getElementById('colMasterDivisiWrapper');
@@ -463,22 +672,17 @@
       if (activeDivision) {
         addVendorDiv.innerHTML = `<option value="${activeDivision.name}">${activeDivision.name}</option>`;
         addVendorDiv.disabled = true;
-
         addMatDiv.innerHTML = `<option value="${activeDivision.name}">${activeDivision.name}</option>`;
         addMatDiv.disabled = true;
-
         if (colDivWrapper) colDivWrapper.classList.add('hidden');
       } else {
         addVendorDiv.innerHTML = dOpts;
         addVendorDiv.disabled = false;
-
         addMatDiv.innerHTML = dOpts;
         addMatDiv.disabled = false;
-
         if (colDivWrapper) colDivWrapper.classList.remove('hidden');
       }
 
-      // Master Armada Global
       if (cRes.data) {
         document.getElementById('inputVehicle').innerHTML = '<option value="">-- Pilih Armada --</option>' + 
           cRes.data.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
@@ -489,12 +693,10 @@
       renderVendorList();
       renderMaterialList();
 
-      // Trigger pembaruan dropdown input kedatangan
       const currentDiv = activeDivision ? activeDivision.name : inputDivEl.value;
       updateVendorAndMaterialDropdowns(currentDiv);
     }
 
-    // Fungsi Pengisi Dropdown Form Registrasi Kedatangan
     function updateVendorAndMaterialDropdowns(divisionName) {
       const vendorEl = document.getElementById('inputVendor');
       const materialEl = document.getElementById('inputMaterial');
@@ -507,27 +709,15 @@
 
       const targetDiv = divisionName.trim().toLowerCase();
 
-      // Filter Vendor
-      const filteredVendors = allVendors.filter(v => 
-        v.division_name && v.division_name.trim().toLowerCase() === targetDiv
-      );
-      if (filteredVendors.length > 0) {
-        vendorEl.innerHTML = '<option value="">-- Pilih Vendor --</option>' + 
-          filteredVendors.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
-      } else {
-        vendorEl.innerHTML = '<option value="">-- Belum ada vendor untuk divisi ini --</option>';
-      }
+      const filteredVendors = allVendors.filter(v => v.division_name && v.division_name.trim().toLowerCase() === targetDiv);
+      vendorEl.innerHTML = filteredVendors.length > 0
+        ? '<option value="">-- Pilih Vendor --</option>' + filteredVendors.map(v => `<option value="${v.name}">${v.name}</option>`).join('')
+        : '<option value="">-- Belum ada vendor --</option>';
 
-      // Filter Muatan
-      const filteredMaterials = allMaterials.filter(m => 
-        m.division_name && m.division_name.trim().toLowerCase() === targetDiv
-      );
-      if (filteredMaterials.length > 0) {
-        materialEl.innerHTML = '<option value="">-- Pilih Muatan --</option>' + 
-          filteredMaterials.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
-      } else {
-        materialEl.innerHTML = '<option value="">-- Belum ada muatan untuk divisi ini --</option>';
-      }
+      const filteredMaterials = allMaterials.filter(m => m.division_name && m.division_name.trim().toLowerCase() === targetDiv);
+      materialEl.innerHTML = filteredMaterials.length > 0
+        ? '<option value="">-- Pilih Muatan --</option>' + filteredMaterials.map(m => `<option value="${m.name}">${m.name}</option>`).join('')
+        : '<option value="">-- Belum ada muatan --</option>';
     }
 
     function onDivisionChange() {
@@ -538,7 +728,6 @@
     function renderDivisionList() {
       const ul = document.getElementById('masterDivisiUl');
       const baseUrl = window.location.origin + window.location.pathname;
-
       ul.innerHTML = allDivisions.map(d => {
         const fullLink = `${baseUrl}?div=${d.code}`;
         return `
@@ -561,11 +750,7 @@
     function renderVendorList() {
       const ul = document.getElementById('masterVendorUl');
       const targetDiv = activeDivision ? activeDivision.name.trim().toLowerCase() : null;
-
-      const list = targetDiv 
-        ? allVendors.filter(v => v.division_name && v.division_name.trim().toLowerCase() === targetDiv)
-        : allVendors;
-
+      const list = targetDiv ? allVendors.filter(v => v.division_name && v.division_name.trim().toLowerCase() === targetDiv) : allVendors;
       ul.innerHTML = list.map(v => `
         <li class="flex justify-between items-center py-1">
           <div>
@@ -574,17 +759,13 @@
           </div>
           <button onclick="deleteMaster('master_vendors', ${v.id})" class="text-red-500 hover:text-red-700 text-[10px]">Hapus</button>
         </li>
-      `).join('') || '<li class="text-slate-400 italic">Belum ada vendor terdaftar</li>';
+      `).join('') || '<li class="text-slate-400 italic">Belum ada vendor</li>';
     }
 
     function renderMaterialList() {
       const ul = document.getElementById('masterMaterialUl');
       const targetDiv = activeDivision ? activeDivision.name.trim().toLowerCase() : null;
-
-      const list = targetDiv 
-        ? allMaterials.filter(m => m.division_name && m.division_name.trim().toLowerCase() === targetDiv)
-        : allMaterials;
-
+      const list = targetDiv ? allMaterials.filter(m => m.division_name && m.division_name.trim().toLowerCase() === targetDiv) : allMaterials;
       ul.innerHTML = list.map(m => `
         <li class="flex justify-between items-center py-1">
           <div>
@@ -593,7 +774,7 @@
           </div>
           <button onclick="deleteMaster('master_materials', ${m.id})" class="text-red-500 hover:text-red-700 text-[10px]">Hapus</button>
         </li>
-      `).join('') || '<li class="text-slate-400 italic">Belum ada muatan terdaftar</li>';
+      `).join('') || '<li class="text-slate-400 italic">Belum ada muatan</li>';
     }
 
     function renderMasterUl(ulId, table, list) {
@@ -606,62 +787,36 @@
     }
 
     function copyToClipboard(text) {
-      navigator.clipboard.writeText(text).then(() => {
-        alert("Tautan divisi berhasil disalin ke clipboard!\n\n" + text);
-      }).catch(err => {
-        prompt("Salin tautan berikut secara manual:", text);
-      });
+      navigator.clipboard.writeText(text).then(() => alert("Tautan disalin:\n" + text));
     }
 
-    // CRUD Master dengan Penanganan State Terkunci
+    // CRUD Master
     async function addDivision() {
       const name = document.getElementById('addDivisiName').value.trim();
       let code = document.getElementById('addDivisiCode').value.trim().toLowerCase().replace(/\s+/g, '-');
       if (!name) return;
       if (!code) code = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
-
       const { error } = await db.from('master_divisions').insert([{ name, code }]);
       if (error) alert(error.message);
-      else {
-        document.getElementById('addDivisiName').value = '';
-        document.getElementById('addDivisiCode').value = '';
-        await loadMasterData();
-      }
+      else { document.getElementById('addDivisiName').value = ''; document.getElementById('addDivisiCode').value = ''; await loadMasterData(); }
     }
 
     async function addVendor() {
-      // Ambil divisi dari activeDivision jika terkunci, atau dari select jika terbuka
       const divName = activeDivision ? activeDivision.name : document.getElementById('addVendorDivisi').value;
       const name = document.getElementById('addVendorName').value.trim();
-      if (!name || !divName) {
-        alert("Nama vendor dan divisi wajib terisi!");
-        return;
-      }
-
+      if (!name || !divName) return;
       const { error } = await db.from('master_vendors').insert([{ name, division_name: divName }]);
-      if (error) {
-        alert(error.message);
-      } else {
-        document.getElementById('addVendorName').value = '';
-        await loadMasterData();
-      }
+      if (error) alert(error.message);
+      else { document.getElementById('addVendorName').value = ''; await loadMasterData(); }
     }
 
     async function addMaterial() {
       const divName = activeDivision ? activeDivision.name : document.getElementById('addMaterialDivisi').value;
       const name = document.getElementById('addMaterialName').value.trim();
-      if (!name || !divName) {
-        alert("Nama muatan dan divisi wajib terisi!");
-        return;
-      }
-
+      if (!name || !divName) return;
       const { error } = await db.from('master_materials').insert([{ name, division_name: divName }]);
-      if (error) {
-        alert(error.message);
-      } else {
-        document.getElementById('addMaterialName').value = '';
-        await loadMasterData();
-      }
+      if (error) alert(error.message);
+      else { document.getElementById('addMaterialName').value = ''; await loadMasterData(); }
     }
 
     async function addMasterGeneric(table, inputId) {
@@ -680,13 +835,9 @@
       else await loadMasterData();
     }
 
-    // 3. Tarik Antrean & Render Board Sesuai Divisi Aktif
+    // Antrean & Audit Trail
     async function fetchQueues() {
-      const { data, error } = await db
-        .from('vendor_queues')
-        .select('*')
-        .order('id', { ascending: true });
-
+      const { data, error } = await db.from('vendor_queues').select('*').order('id', { ascending: true });
       if (error) { console.error(error); return; }
       cachedQueues = data || [];
       renderBoard();
@@ -694,15 +845,11 @@
 
     function renderBoard() {
       const todayDateStr = new Date().toISOString().slice(0, 10);
-
       const colMenunggu = document.getElementById('colMenunggu');
       const colProses = document.getElementById('colProses');
       const colSelesai = document.getElementById('colSelesai');
 
-      colMenunggu.innerHTML = '';
-      colProses.innerHTML = '';
-      colSelesai.innerHTML = '';
-
+      colMenunggu.innerHTML = ''; colProses.innerHTML = ''; colSelesai.innerHTML = '';
       let c1 = 0, c2 = 0, c3 = 0;
 
       cachedQueues.forEach(item => {
@@ -713,16 +860,9 @@
           if (compDate !== todayDateStr) return;
         }
 
-        if (item.status === 'Menunggu') {
-          c1++;
-          colMenunggu.innerHTML += createBoardCard(item);
-        } else if (item.status === 'Proses') {
-          c2++;
-          colProses.innerHTML += createBoardCard(item);
-        } else {
-          c3++;
-          colSelesai.innerHTML += createBoardCard(item);
-        }
+        if (item.status === 'Menunggu') { c1++; colMenunggu.innerHTML += createBoardCard(item); }
+        else if (item.status === 'Proses') { c2++; colProses.innerHTML += createBoardCard(item); }
+        else { c3++; colSelesai.innerHTML += createBoardCard(item); }
       });
 
       document.getElementById('badgeCountMenunggu').innerText = c1;
@@ -737,6 +877,16 @@
     function createBoardCard(item) {
       const actColor = item.activity_type === 'Bongkar' ? 'bg-amber-100 text-amber-800' : 'bg-purple-100 text-purple-800';
       
+      // Penanda pelaku di kartu
+      let actorTag = '';
+      if (item.status === 'Menunggu') {
+        actorTag = `Tiket: ${item.created_by || '-'}`;
+      } else if (item.status === 'Proses') {
+        actorTag = `Mulai oleh: ${item.started_by || '-'}`;
+      } else {
+        actorTag = `Selesai oleh: ${item.completed_by || '-'}`;
+      }
+
       let actionBtn = '';
       if (item.status === 'Menunggu') {
         actionBtn = `
@@ -786,6 +936,7 @@
             ` : ''}
           </div>
 
+          <p class="text-[10px] text-slate-400 mt-2 italic">👤 ${actorTag}</p>
           ${actionBtn}
         </div>
       `;
@@ -793,7 +944,6 @@
 
     setInterval(() => {
       const now = new Date().getTime();
-
       cachedQueues.forEach(item => {
         const elAntre = document.getElementById(`timerAntre-${item.id}`);
         const elProses = document.getElementById(`timerProses-${item.id}`);
@@ -802,25 +952,12 @@
         const tProcess = item.process_started_at ? new Date(item.process_started_at).getTime() : null;
         const tCompleted = item.completed_at ? new Date(item.completed_at).getTime() : null;
 
-        if (elAntre) {
-          if (item.status === 'Menunggu') {
-            elAntre.innerText = formatDuration(now - tArrived) + " (Live)";
-          } else {
-            elAntre.innerText = formatDuration(tProcess - tArrived);
-          }
-        }
-
-        if (elProses) {
-          if (item.status === 'Proses') {
-            elProses.innerText = formatDuration(now - tProcess) + " (Live)";
-          } else if (item.status === 'Selesai') {
-            elProses.innerText = formatDuration(tCompleted - tProcess);
-          }
-        }
+        if (elAntre) elAntre.innerText = item.status === 'Menunggu' ? formatDuration(now - tArrived) + " (Live)" : formatDuration(tProcess - tArrived);
+        if (elProses) elProses.innerText = item.status === 'Proses' ? formatDuration(now - tProcess) + " (Live)" : (item.status === 'Selesai' ? formatDuration(tCompleted - tProcess) : '-');
       });
     }, 1000);
 
-    // Registrasi Truk
+    // Registrasi Truk (Merekam created_by)
     document.getElementById('queueForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('btnSubmitQueue');
@@ -834,6 +971,7 @@
       const queueCode = `${prefix}-${timeCode}`;
 
       const selectedDiv = activeDivision ? activeDivision.name : document.getElementById('inputDivision').value;
+      const actorLabel = `${currentUser.full_name} (${currentUser.role})`;
 
       const payload = {
         queue_code: queueCode,
@@ -843,44 +981,45 @@
         vehicle_type: document.getElementById('inputVehicle').value,
         plate_number: document.getElementById('inputPlate').value.trim().toUpperCase(),
         material: document.getElementById('inputMaterial').value,
-        status: 'Menunggu'
+        status: 'Menunggu',
+        created_by: actorLabel
       };
 
       const { error } = await db.from('vendor_queues').insert([payload]);
-
-      if (error) {
-        alert('Gagal simpan antrean: ' + error.message);
-      } else {
-        document.getElementById('inputPlate').value = '';
-        await fetchQueues();
-      }
+      if (error) alert('Gagal simpan antrean: ' + error.message);
+      else { document.getElementById('inputPlate').value = ''; await fetchQueues(); }
 
       btn.disabled = false;
       btn.innerText = '+ Generate Tiket & Antrekan';
     });
 
+    // Update Status dengan Konfirmasi & Pencatatan Pelaku
     async function updateQueueStatus(id, newStatus) {
-      // Munculkan pop-up konfirmasi sebelum mengubah status waktu
-      const isConfirmed = confirm("APAKAH ANDA YAKIN 100% AKAN MELAKUKAN ADEGAN BERBAHAYA INI?");
-      if (!isConfirmed) return; // Batalkan jika operator menekan Cancel/Batal
+      const isConfirmed = confirm("apakah anda yakin mau melakukan adegan berbahaya ini?");
+      if (!isConfirmed) return;
 
       const nowIso = new Date().toISOString();
+      const actorLabel = `${currentUser.full_name} (${currentUser.role})`;
       const payload = { status: newStatus };
 
       if (newStatus === 'Proses') {
         payload.process_started_at = nowIso;
+        payload.started_by = actorLabel;
       } else if (newStatus === 'Selesai') {
         payload.completed_at = nowIso;
+        payload.completed_by = actorLabel;
       }
 
       const { error } = await db.from('vendor_queues').update(payload).eq('id', id);
       if (error) alert(error.message);
       else fetchQueues();
     }
+
+    // Rekap & Filter
     async function applyReportFilter() {
       const sDate = document.getElementById('filterStartDate').value;
       const eDate = document.getElementById('filterEndDate').value;
-      const fDiv = document.getElementById('filterDivisi').value;
+      const fDiv = activeDivision ? activeDivision.name : document.getElementById('filterDivisi').value;
       const fAct = document.getElementById('filterActivity').value;
       const fStat = document.getElementById('filterStatus').value;
 
@@ -899,7 +1038,7 @@
       const tbody = document.getElementById('rekapTableBody');
 
       if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="p-6 text-center text-slate-400">Tidak ada data sesuai kriteria</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="p-6 text-center text-slate-400">Tidak ada data sesuai kriteria</td></tr>';
         return;
       }
 
@@ -908,9 +1047,9 @@
         const tPrc = item.process_started_at ? new Date(item.process_started_at).getTime() : null;
         const tCmp = item.completed_at ? new Date(item.completed_at).getTime() : null;
 
-        const durAntre = tPrc ? formatDuration(tPrc - tArr) : formatDuration(new Date().getTime() - tArr) + ' (On going)';
-        const durProses = tCmp ? formatDuration(tCmp - tPrc) : (tPrc ? formatDuration(new Date().getTime() - tPrc) + ' (On going)' : '-');
-        const totalTime = tCmp ? formatDuration(tCmp - tArr) : '-';
+        const durAntre = tPrc ? formatDuration(tPrc - tArr) : formatDuration(new Date().getTime() - tArr) + ' (Live)';
+        const durProses = tCmp ? formatDuration(tCmp - tPrc) : (tPrc ? formatDuration(new Date().getTime() - tPrc) + ' (Live)' : '-');
+        const lastActor = item.completed_by || item.started_by || item.created_by || '-';
 
         return `
           <tr class="hover:bg-slate-50 transition border-b border-slate-100">
@@ -923,10 +1062,9 @@
             <td class="p-3">${item.division}</td>
             <td class="p-3 font-semibold ${item.activity_type === 'Bongkar' ? 'text-amber-700' : 'text-purple-700'}">${item.activity_type}</td>
             <td class="p-3 font-medium">${item.vendor_name} <br><span class="font-mono text-slate-500">${item.plate_number}</span></td>
-            <td class="p-3 text-slate-600">${item.material}</td>
             <td class="p-3 font-mono font-bold text-amber-700">${durAntre}</td>
             <td class="p-3 font-mono font-bold text-blue-700">${durProses}</td>
-            <td class="p-3 font-mono font-bold text-emerald-700">${totalTime}</td>
+            <td class="p-3 text-[11px] text-slate-600 font-medium">${lastActor}</td>
             <td class="p-3 text-center">
               <span class="px-2 py-0.5 rounded text-[10px] font-bold ${
                 item.status === 'Menunggu' ? 'bg-amber-100 text-amber-800' : 
@@ -938,6 +1076,7 @@
       }).join('');
     }
 
+    // Modal Audit Trail Lengkap
     async function openDetailModal(id) {
       let item = cachedQueues.find(q => q.id === id);
       if (!item) {
@@ -955,8 +1094,13 @@
       document.getElementById('mMuatan').innerText = item.material;
 
       document.getElementById('mTimeArrived').innerText = formatDateTime(item.arrived_at);
+      document.getElementById('mUserArrived').innerText = `Oleh: ${item.created_by || 'Tidak tercatat'}`;
+
       document.getElementById('mTimeProcess').innerText = item.process_started_at ? formatDateTime(item.process_started_at) : 'Belum dimulai';
+      document.getElementById('mUserProcess').innerText = item.started_by ? `Oleh: ${item.started_by}` : '-';
+
       document.getElementById('mTimeCompleted').innerText = item.completed_at ? formatDateTime(item.completed_at) : 'Belum selesai';
+      document.getElementById('mUserCompleted').innerText = item.completed_by ? `Oleh: ${item.completed_by}` : '-';
 
       const tArr = new Date(item.arrived_at).getTime();
       const tPrc = item.process_started_at ? new Date(item.process_started_at).getTime() : null;
@@ -973,13 +1117,18 @@
       document.getElementById('modalDetail').classList.add('hidden');
     }
 
+    // Inisialisasi Tanggal Filter
     const today = new Date();
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
     document.getElementById('filterStartDate').value = firstDay;
     document.getElementById('filterEndDate').value = today.toISOString().slice(0, 10);
 
-    loadMasterData();
-    fetchQueues();
+    // Cek apakah sudah ada sesi login aktif di browser
+    const savedSession = sessionStorage.getItem('dock_user_session');
+    if (savedSession) {
+      currentUser = JSON.parse(savedSession);
+      initAuthenticatedApp();
+    }
   </script>
 </body>
 </html>
